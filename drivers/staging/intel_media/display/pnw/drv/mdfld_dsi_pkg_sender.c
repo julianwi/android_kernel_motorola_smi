@@ -1353,7 +1353,9 @@ int mdfld_dsi_send_dcs(struct mdfld_dsi_pkg_sender * sender,
 		 */
 		retry = MDFLD_DSI_DBI_FIFO_TIMEOUT;
 		while (retry && !(REG_READ(sender->mipi_gen_fifo_stat_reg) & BIT27)) {
-			udelay(500);
+			spin_unlock(&sender->lock);
+			usleep_range(300, 700);
+			spin_lock(&sender->lock);
 			retry--;
 		}
 		/*if DBI FIFO timeout, drop this frame*/
