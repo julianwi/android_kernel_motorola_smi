@@ -62,6 +62,7 @@
 #include <asm/hw_irq.h>
 
 #include <asm/apic.h>
+#include <asm/intel-mid.h>
 
 #define __apicdebuginit(type) static type __init
 
@@ -2277,6 +2278,13 @@ void irq_force_complete_move(int irq)
 static inline void irq_complete_move(struct irq_cfg *cfg) { }
 #endif
 
+#ifdef CONFIG_X86_MDFLD
+static int ioapic_set_wake(struct irq_data *data, unsigned int on)
+{
+	return 0;
+}
+#endif
+
 static void __target_IO_APIC_irq(unsigned int irq, unsigned int dest, struct irq_cfg *cfg)
 {
 	int apic, pin;
@@ -2516,9 +2524,14 @@ static struct irq_chip ioapic_chip __read_mostly = {
 	.irq_startup		= startup_ioapic_irq,
 	.irq_mask		= mask_ioapic_irq,
 	.irq_unmask		= unmask_ioapic_irq,
+	.irq_disable		= mask_ioapic_irq,
+	.irq_enable		= unmask_ioapic_irq,
 	.irq_ack		= ack_apic_edge,
 	.irq_eoi		= ack_apic_level,
 	.irq_set_affinity	= native_ioapic_set_affinity,
+#ifdef CONFIG_X86_MDFLD
+	.irq_set_wake	= ioapic_set_wake,
+#endif
 	.irq_retrigger		= ioapic_retrigger_irq,
 };
 

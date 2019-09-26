@@ -69,6 +69,7 @@
 #include <linux/crash_dump.h>
 #include <linux/tboot.h>
 #include <linux/jiffies.h>
+#include <asm/intel-mid.h>
 
 #include <video/edid.h>
 
@@ -1098,6 +1099,14 @@ void __init setup_arch(char **cmdline_p)
 
 	trim_platform_memory_ranges();
 	trim_low_memory_range();
+
+#ifdef CONFIG_X86_MRST
+	mrst_reserve_memory();
+#endif
+
+#ifdef CONFIG_INTEL_MID_RAM_CONSOLE
+	ram_consle_reserve_memory();
+#endif
 
 	init_mem_mapping();
 

@@ -761,10 +761,6 @@ int pci_set_power_state(struct pci_dev *dev, pci_power_t state)
 		 */
 		return 0;
 
-	/* Check if we're already there */
-	if (dev->current_state == state)
-		return 0;
-
 	__pci_start_power_transition(dev, state);
 
 	/* This device is quirked not to be put into D3, so
