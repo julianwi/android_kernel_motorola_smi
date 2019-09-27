@@ -1,0 +1,66 @@
+#
+# Drm device configuration
+#
+# This driver provides support for the
+# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
+#
+
+config DRM_INTEL_MID
+	tristate "Intel Moorestown/Medfield (load along with IMG driver)"
+	depends on DRM && PCI
+	select FB_CFB_COPYAREA
+        select FB_CFB_FILLRECT
+        select FB_CFB_IMAGEBLIT
+        select DRM_KMS_HELPER
+        select GENERIC_ALLOCATOR
+        select DRM_TTM
+	help
+	  xxxxxxxxxxxxxxxxxxxxxxxxxx
+
+choice
+	prompt "Build IMG kernel service as "
+	depends on DRM_INTEL_MID
+	default DRM_MID_RELEASE
+
+config DRM_MID_RELEASE
+	bool "Release"
+	depends on DRM_INTEL_MID
+	help
+	  Build IMG kernel services as release
+
+config DRM_MID_DEBUG
+	bool "Debug"
+	depends on DRM_INTEL_MID
+	help
+	 Build IMG kernel services as debug
+
+endchoice
+
+config DRM_MDFLD
+	tristate "Intel Medfield"
+        depends on DRM_INTEL_MID && PCI
+        select FB_CFB_COPYAREA
+        select FB_CFB_FILLRECT
+        select FB_CFB_IMAGEBLIT
+        select DRM_KMS_HELPER
+        help
+          Choose this option if you have a Medfield platform.
+          If M is selected the module will be called mid_gfx.
+
+config MDFD_VIDEO_DECODE
+	bool "Support for Medfield Video Decode"
+	depends on DRM_MDFLD || DRM_CTP
+	default n
+	help
+	  xxxxxx
+
+config SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY
+	tristate "Support SMD QHD AMOLED MIPI interface Panel in command mode"
+	depends on DRM_MDFLD
+	default n
+	help
+	  Choose this option if
+	  you have a SC1/SMi command
+	  mode AMOLED MIPI panel, with
+	  540 x 960 resolution
+	  in portrait mode.
