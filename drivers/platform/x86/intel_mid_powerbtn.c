@@ -21,82 +21,153 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
-#include <linux/platform_device.h>
+#include <linux/ipc_device.h>
 #include <linux/input.h>
-#include <linux/mfd/intel_msic.h>
+#include <linux/io.h>
+#include <asm/intel_scu_ipc.h>
+
+#ifdef CONFIG_PM_DEEPSLEEP
+#include <linux/suspend.h>
+#include <linux/wakelock.h>
+#endif
+
 
 #define DRIVER_NAME "msic_power_btn"
 
-#define MSIC_PB_LEVEL	(1 << 3) /* 1 - release, 0 - press */
+/* SRAM address for power button state */
+#if defined(CONFIG_BOARD_CTP) && defined(CONFIG_POWER_BUTTON_CLVP)
+#define MSIC_PB_STAT    0xffffefcb
+#elif defined(CONFIG_BOARD_CTP)
+#define MSIC_PB_STAT    0xffff7fcb
+#else
+#define MSIC_PB_STAT	0xffff7fd0
+#endif
+
+#define MSIC_PB_LEVEL (1 << 3) /* 1 - release, 0 - press */
+#define MSIC_PB_LEN	1
 
 /*
  * MSIC document ti_datasheet defines the 1st bit reg 0x21 is used to mask
  * power button interrupt
  */
-#define MSIC_PWRBTNM    (1 << 0)
+#define MSIC_IRQLVL1MSK	0x21
+#define MSIC_PWRBTNM	(1 << 0)
+
+struct mfld_pb_priv {
+	struct input_dev *input;
+	int irq;
+	void __iomem *pb_stat;
+#ifdef CONFIG_PM_DEEPSLEEP
+	struct hrtimer longPress_timer;
+	int expired;
+	struct wake_lock wake_lock;
+#endif
+};
+
+#ifdef CONFIG_PM_DEEPSLEEP
+static enum hrtimer_restart longPress_timer_callback(struct hrtimer *timer)
+{
+	struct mfld_pb_priv *priv  =
+		container_of(timer, struct mfld_pb_priv, longPress_timer);
+
+	priv->expired = 1;
+	printk(KERN_INFO "Report pwrkey press event");
+	input_event(priv->input, EV_KEY, KEY_POWER, 1);
+	input_sync(priv->input);
+
+	return HRTIMER_NORESTART;
+}
+#endif
 
 static irqreturn_t mfld_pb_isr(int irq, void *dev_id)
 {
-	struct input_dev *input = dev_id;
-	int ret;
+	struct mfld_pb_priv *priv = dev_id;
 	u8 pbstat;
 
-	ret = intel_msic_reg_read(INTEL_MSIC_PBSTATUS, &pbstat);
-	dev_dbg(input->dev.parent, "PB_INT status= %d\n", pbstat);
+	pbstat = readb(priv->pb_stat);
+	dev_dbg(&priv->input->dev, "pbstat: 0x%x\n", pbstat);
 
-	if (ret < 0) {
-		dev_err(input->dev.parent, "Read error %d while reading"
-			       " MSIC_PB_STATUS\n", ret);
-	} else {
-		input_event(input, EV_KEY, KEY_POWER,
-			       !(pbstat & MSIC_PB_LEVEL));
-		input_sync(input);
+#ifdef CONFIG_PM_DEEPSLEEP
+	if (get_deepsleep_mode()) {
+		if (pbstat & MSIC_PB_LEVEL) {
+			hrtimer_cancel(&priv->longPress_timer);
+			wake_lock_timeout(&priv->wake_lock, 20);
+			if (priv->expired == 1) {
+				priv->expired = 0;
+				printk(KERN_INFO "Report pwrkey release event");
+				input_event(priv->input, EV_KEY, KEY_POWER, 0);
+				input_sync(priv->input);
+			}
+		} else {
+			priv->expired = 0;
+			hrtimer_start(&priv->longPress_timer,
+					ktime_set(2, 0), HRTIMER_MODE_REL);
+			wake_lock_timeout(&priv->wake_lock, 2*HZ+5);
+		}
+	} else
+#endif
+	{
+	if (!(pbstat & MSIC_PB_LEVEL))
+		printk(KERN_INFO "Report pwrkey press event");
+	else
+		printk(KERN_INFO "Report pwrkey release event");
+	input_event(priv->input, EV_KEY, KEY_POWER, !(pbstat & MSIC_PB_LEVEL));
+	input_sync(priv->input);
 	}
-
 	return IRQ_HANDLED;
 }
 
-static int mfld_pb_probe(struct platform_device *pdev)
+static int mfld_pb_probe(struct ipc_device *ipcdev)
 {
+	struct mfld_pb_priv *priv;
 	struct input_dev *input;
-	int irq = platform_get_irq(pdev, 0);
-	int error;
+	int ret;
+	int irq;
+	u8 value;
 
+	irq = ipc_get_irq(ipcdev, 0);
 	if (irq < 0)
 		return -EINVAL;
 
+	priv = kzalloc(sizeof(struct mfld_pb_priv), GFP_KERNEL);
 	input = input_allocate_device();
-	if (!input) {
-		dev_err(&pdev->dev, "Input device allocation error\n");
-		return -ENOMEM;
+	if (!priv || !input) {
+		ret = -ENOMEM;
+		goto fail;
 	}
 
-	input->name = pdev->name;
+	priv->input = input;
+	priv->irq = irq;
+	ipc_set_drvdata(ipcdev, priv);
+
+	input->name = ipcdev->name;
 	input->phys = "power-button/input0";
-	input->id.bustype = BUS_HOST;
-	input->dev.parent = &pdev->dev;
+	input->dev.parent = &ipcdev->dev;
 
 	input_set_capability(input, EV_KEY, KEY_POWER);
 
-	error = request_threaded_irq(irq, NULL, mfld_pb_isr, IRQF_NO_SUSPEND,
-			DRIVER_NAME, input);
-	if (error) {
-		dev_err(&pdev->dev, "Unable to request irq %d for mfld power"
-				"button\n", irq);
-		goto err_free_input;
+	priv->pb_stat = ioremap(MSIC_PB_STAT, MSIC_PB_LEN);
+	if (!priv->pb_stat) {
+		ret = -ENOMEM;
+		goto fail;
 	}
 
-	error = input_register_device(input);
-	if (error) {
-		dev_err(&pdev->dev, "Unable to register input dev, error "
-				"%d\n", error);
-		goto err_free_irq;
+	ret = request_irq(priv->irq, mfld_pb_isr,
+			  IRQF_NO_SUSPEND, DRIVER_NAME, priv);
+	if (ret) {
+		dev_err(&ipcdev->dev,
+			"unable to request irq %d for power button\n", irq);
+		goto out_iounmap;
 	}
 
-	platform_set_drvdata(pdev, input);
+	ret = input_register_device(input);
+	if (ret) {
+		dev_err(&ipcdev->dev,
+			"unable to register input dev, error %d\n", ret);
+		goto out_free_irq;
+	}
 
-	/*
-	 * SCU firmware might send power button interrupts to IA core before
+	/* SCU firmware might send power button interrupts to IA core before
 	 * kernel boots and doesn't get EOI from IA core. The first bit of
 	 * MSIC reg 0x21 is kept masked, and SCU firmware doesn't send new
 	 * power interrupt to Android kernel. Unmask the bit when probing
@@ -105,46 +176,68 @@ static int mfld_pb_probe(struct platform_device *pdev)
 	 * initialization. The race happens rarely. So we needn't worry
 	 * about it.
 	 */
-	error = intel_msic_reg_update(INTEL_MSIC_IRQLVL1MSK, 0, MSIC_PWRBTNM);
-	if (error) {
-		dev_err(&pdev->dev, "Unable to clear power button interrupt, "
-				"error: %d\n", error);
-		goto err_free_irq;
-	}
+	ret = intel_scu_ipc_ioread8(MSIC_IRQLVL1MSK, &value);
+	value &= ~MSIC_PWRBTNM;
+	ret = intel_scu_ipc_iowrite8(MSIC_IRQLVL1MSK, value);
+
+#ifdef CONFIG_PM_DEEPSLEEP
+	hrtimer_init(&(priv->longPress_timer),
+			CLOCK_MONOTONIC,
+			HRTIMER_MODE_REL);
+
+	(priv->longPress_timer).function = longPress_timer_callback;
+	wake_lock_init(&priv->wake_lock, WAKE_LOCK_SUSPEND, "pwrkey");
+#endif
 
 	return 0;
 
-err_free_irq:
-	free_irq(irq, input);
-err_free_input:
+out_free_irq:
+	free_irq(priv->irq, priv);
+out_iounmap:
+	iounmap(priv->pb_stat);
+fail:
+	ipc_set_drvdata(ipcdev, NULL);
 	input_free_device(input);
-	return error;
+	kfree(priv);
+	return ret;
 }
 
-static int mfld_pb_remove(struct platform_device *pdev)
+static int mfld_pb_remove(struct ipc_device *ipcdev)
 {
-	struct input_dev *input = platform_get_drvdata(pdev);
-	int irq = platform_get_irq(pdev, 0);
+	struct mfld_pb_priv *priv = ipc_get_drvdata(ipcdev);
 
-	free_irq(irq, input);
-	input_unregister_device(input);
-	platform_set_drvdata(pdev, NULL);
-
+	iounmap(priv->pb_stat);
+	free_irq(priv->irq, priv);
+	input_unregister_device(priv->input);
+#ifdef CONFIG_PM_DEEPSLEEP
+	wake_lock_destroy(&priv->wake_lock);
+#endif
+	kfree(priv);
 	return 0;
 }
 
-static struct platform_driver mfld_pb_driver = {
+static struct ipc_driver mfld_pb_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
 	},
-	.probe	= mfld_pb_probe,
-	.remove	= mfld_pb_remove,
+	.probe  = mfld_pb_probe,
+	.remove = mfld_pb_remove,
 };
 
-module_platform_driver(mfld_pb_driver);
+static int __init mfld_pb_init(void)
+{
+	return ipc_driver_register(&mfld_pb_driver);
+}
+
+static void __exit mfld_pb_exit(void)
+{
+	ipc_driver_unregister(&mfld_pb_driver);
+}
+
+module_init(mfld_pb_init);
+module_exit(mfld_pb_exit);
 
 MODULE_AUTHOR("Hong Liu <hong.liu@intel.com>");
 MODULE_DESCRIPTION("Intel Medfield Power Button Driver");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform:" DRIVER_NAME);

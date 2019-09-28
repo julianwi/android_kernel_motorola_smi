@@ -481,6 +481,25 @@ config X86_MDFLD
 	  nor standard legacy replacement devices/features. e.g. Medfield does
 	  not contain i8259, i8254, HPET, legacy BIOS, most of the io ports.
 
+choice
+	prompt "Intel MID board type"
+	depends on X86_INTEL_MID
+	---help---
+	  This option is used for selecting the board configuration of
+	  Intel mobile devices.
+	  You should select the board name that matches your hardware
+          configuration.
+
+config BOARD_MFLD_MOTO
+	bool "Support Motorola's Medfield-based products"
+	depends on X86_MDFLD
+	default n
+	---help---
+	  Medfield based board configuration for Motorola devices. Say yes
+	  here if your device falls under the Motorola umbrella.
+
+endchoice
+
 endif
 
 config X86_INTEL_LPSS
