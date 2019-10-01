@@ -436,7 +436,7 @@ static int drm_psb_ttm_tt_populate(struct ttm_tt *ttm)
 
 	if (ttm->state != tt_unpopulated)
 		return 0;
-#if 0//(LINUX_VERSION_CODE > KERNEL_VERSION(3, 3, 0))
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 3, 0))
 	bool slave = !!(ttm->page_flags & TTM_PAGE_FLAG_SG);
 	if (slave && ttm->sg) {
 		drm_prime_sg_to_page_addr_arrays(ttm->sg, ttm->pages,
@@ -466,7 +466,7 @@ static void drm_psb_ttm_tt_unpopulate(struct ttm_tt *ttm)
 	struct drm_psb_private *dev_priv;
 	struct drm_device *ddev;
 
-#if 0//(LINUX_VERSION_CODE > KERNEL_VERSION(3, 3, 0))
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 3, 0))
 	bool slave = !!(ttm->page_flags & TTM_PAGE_FLAG_SG);
 
 	if (slave)

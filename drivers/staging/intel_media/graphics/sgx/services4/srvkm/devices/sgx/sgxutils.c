@@ -63,12 +63,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/kernel.h>	// sprintf
 #include <linux/string.h>	// strncpy, strlen
 
-#ifndef CREATE_TRACE_POINTS
-#define CREATE_TRACE_POINTS
-#include <trace/events/gfx_idle.h>
-#undef CREATE_TRACE_POINTS
-#endif
-
 #else
 #include <stdio.h>
 #endif
@@ -155,14 +149,12 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 	{
 		psDevInfo->bSGXIdle = IMG_TRUE;
 		SysSGXIdleTransition(psDevInfo->bSGXIdle);
-		//trace_gfx_idle_entry(smp_processor_id());
 	}
 	else if (psDevInfo->bSGXIdle &&
 			((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) == 0))
 	{
 		psDevInfo->bSGXIdle = IMG_FALSE;
 		SysSGXIdleTransition(psDevInfo->bSGXIdle);
-		//trace_gfx_idle_exit(smp_processor_id());
 	}
 #endif /* SYS_SUPPORTS_SGX_IDLE_CALLBACK */
 
@@ -200,7 +192,6 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 
 		/* Microkernel is idle and is requesting to be powered down. */
 		psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER;
-		//trace_gfx_idle_poweroff(smp_processor_id());
 
 		/* Suspend pdumping. */
 		PDUMPSUSPEND();

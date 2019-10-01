@@ -34,7 +34,9 @@ struct ttm_bo_user_object {
 	struct ttm_buffer_object bo;
 };
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 static size_t pl_bo_size;
+#endif
 
 static uint32_t psb_busy_prios[] = {
 	TTM_PL_FLAG_TT | TTM_PL_FLAG_WC | TTM_PL_FLAG_UNCACHED,
@@ -45,6 +47,21 @@ static uint32_t psb_busy_prios[] = {
 };
 
 const struct ttm_placement default_placement = {0, 0, 0, NULL, 5, psb_busy_prios};
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+static size_t ttm_pl_size(struct ttm_bo_device *bdev, unsigned long num_pages)
+{
+	size_t page_array_size =
+		(num_pages * sizeof(void *) + PAGE_SIZE - 1) & PAGE_MASK;
+
+	if (unlikely(pl_bo_size == 0)) {
+		pl_bo_size = bdev->glob->ttm_bo_extra_size +
+			     ttm_round_pot(sizeof(struct ttm_bo_user_object));
+	}
+
+	return bdev->glob->ttm_bo_size + 2 * page_array_size;
+}
+#endif
 
 static struct ttm_bo_user_object *ttm_bo_user_lookup(struct ttm_object_file
 		*tfile, uint32_t handle) {
@@ -136,6 +153,57 @@ static void ttm_pl_fill_rep(struct ttm_buffer_object *bo,
 	rep->handle = user_bo->base.hash.key;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+/* FIXME Copy from upstream TTM */
+static inline size_t ttm_bo_size(struct ttm_bo_global *glob,
+				 unsigned long num_pages)
+{
+	size_t page_array_size = (num_pages * sizeof(void *) + PAGE_SIZE - 1) &
+				 PAGE_MASK;
+
+	return glob->ttm_bo_size + 2 * page_array_size;
+}
+#endif /* if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)) */
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+/* FIXME Copy from upstream TTM "ttm_bo_create", upstream TTM does not export this, so copy it here */
+static int ttm_bo_create_private(struct ttm_bo_device *bdev,
+				 unsigned long size,
+				 enum ttm_bo_type type,
+				 struct ttm_placement *placement,
+				 uint32_t page_alignment,
+				 unsigned long buffer_start,
+				 bool interruptible,
+				 struct file *persistant_swap_storage,
+				 struct ttm_buffer_object **p_bo)
+{
+	struct ttm_buffer_object *bo;
+	struct ttm_mem_global *mem_glob = bdev->glob->mem_glob;
+	int ret;
+
+	size_t acc_size =
+		ttm_bo_size(bdev->glob, (size + PAGE_SIZE - 1) >> PAGE_SHIFT);
+	ret = ttm_mem_global_alloc(mem_glob, acc_size, false, false);
+	if (unlikely(ret != 0))
+		return ret;
+
+	bo = kzalloc(sizeof(*bo), GFP_KERNEL);
+
+	if (unlikely(bo == NULL)) {
+		ttm_mem_global_free(mem_glob, acc_size);
+		return -ENOMEM;
+	}
+
+	ret = ttm_bo_init(bdev, bo, size, type, placement, page_alignment,
+			  buffer_start, interruptible,
+			  persistant_swap_storage, acc_size, NULL);
+	if (likely(ret == 0))
+		*p_bo = bo;
+
+	return ret;
+}
+#endif /* if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)) */
+
 int psb_ttm_bo_check_placement(struct ttm_buffer_object *bo,
 			       struct ttm_placement *placement)
 {
@@ -180,8 +248,14 @@ int ttm_buffer_object_create(struct ttm_bo_device *bdev,
 	placement.num_placement = 1;
 	placement.placement = &flags;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+	ret = ttm_bo_create_private(bdev, size, type, &placement,
+		page_alignment, buffer_start, interruptible,
+		persistant_swap_storage, p_bo);
+#else
 	ret = ttm_bo_create(bdev, size, type, &placement, page_alignment,
-          interruptible, persistant_swap_storage, p_bo);
+		interruptible, persistant_swap_storage, p_bo);
+#endif
 
 	return ret;
 }
@@ -201,8 +275,13 @@ int ttm_pl_create_ioctl(struct ttm_object_file *tfile,
 	int ret = 0;
 	struct ttm_mem_global *mem_glob = bdev->glob->mem_glob;
 	struct ttm_placement placement = default_placement;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+	size_t acc_size =
+		ttm_pl_size(bdev, (req->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
+#else
 	size_t acc_size = ttm_bo_acc_size(bdev, req->size,
-          sizeof(struct ttm_buffer_object));
+		sizeof(struct ttm_buffer_object));
+#endif
 	ret = ttm_mem_global_alloc(mem_glob, acc_size, false, false);
 	if (unlikely(ret != 0))
 		return ret;
@@ -279,8 +358,14 @@ int ttm_pl_ub_create_ioctl(struct ttm_object_file *tfile,
 	int ret = 0;
 	struct ttm_mem_global *mem_glob = bdev->glob->mem_glob;
 	struct ttm_placement placement = default_placement;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+	size_t acc_size =
+		ttm_pl_size(bdev, (req->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
+#else
 	size_t acc_size = ttm_bo_acc_size(bdev, req->size,
-          sizeof(struct ttm_buffer_object));
+		sizeof(struct ttm_buffer_object));
+#endif
+
 	ret = ttm_mem_global_alloc(mem_glob, acc_size, false, false);
 	if (unlikely(ret != 0))
 		return ret;
@@ -302,10 +387,72 @@ int ttm_pl_ub_create_ioctl(struct ttm_object_file *tfile,
 	placement.num_placement = 1;
 	placement.placement = &flags;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+
+/*  For kernel 3.0, use the desired type. */
+#define TTM_HACK_WORKAROUND_ttm_bo_type_user ttm_bo_type_user
+
+#else
+/*  TTM_HACK_WORKAROUND_ttm_bo_type_user -- Hack for porting,
+    as ttm_bo_type_user is no longer implemented.
+    This will not result in working code.
+    FIXME - to be removed. */
+
+#warning warning: ttm_bo_type_user no longer supported
+
+/*  For kernel 3.3+, use the wrong type, which will compile but not work. */
+#define TTM_HACK_WORKAROUND_ttm_bo_type_user ttm_bo_type_kernel
+
+#endif
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 3, 0))
+		/* Handle frame buffer allocated in user space, Convert
+		  user space virtual address into pages list */
+		unsigned int page_nr = 0;
+		struct vm_area_struct *vma = NULL;
+		struct sg_table *sg = NULL;
+		unsigned long num_pages = 0;
+		struct page **pages = 0;
+
+		num_pages = (req->size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+		pages = kzalloc(num_pages * sizeof(struct page *), GFP_KERNEL);
+		if (unlikely(pages == NULL)) {
+			printk(KERN_ERR "kzalloc pages failed\n");
+			return -ENOMEM;
+		}
+
+		down_read(&current->mm->mmap_sem);
+		vma = find_vma(current->mm, req->user_address);
+		if (unlikely(vma == NULL)) {
+			up_read(&current->mm->mmap_sem);
+			kfree(pages);
+			printk(KERN_ERR "find_vma failed\n");
+			return -EFAULT;
+		}
+		unsigned long before_flags = vma->vm_flags;
+		if (vma->vm_flags & (VM_IO | VM_PFNMAP))
+			vma->vm_flags = vma->vm_flags & ((~VM_IO) & (~VM_PFNMAP));
+		page_nr = get_user_pages(current, current->mm,
+					 req->user_address,
+					 (int)(num_pages), 1, 0, pages,
+					 NULL);
+		vma->vm_flags = before_flags;
+		up_read(&current->mm->mmap_sem);
+
+		/* can be written by caller, not forced */
+		if (unlikely(page_nr < num_pages)) {
+			kfree(pages);
+			pages = 0;
+			printk(KERN_ERR "get_user_pages err.\n");
+			return -ENOMEM;
+		}
+		kfree(pages);
+#endif
+
 	ret = ttm_bo_init(bdev,
 			  bo,
 			  req->size,
-			  ttm_bo_type_kernel,
+			  TTM_HACK_WORKAROUND_ttm_bo_type_user,
 			  &placement,
 			  req->page_alignment,
 			  true,

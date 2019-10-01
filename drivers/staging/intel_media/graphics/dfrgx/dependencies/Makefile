@@ -1,0 +1,11 @@
+INCLUDES_RGX += \
+	-Idrivers/staging/intel_media/graphics/dfrgx \
+	-Idrivers/staging/intel_media/graphics/rgx/services/server/include \
+	-Idrivers/staging/intel_media/graphics/rgx/services/shared/include \
+	-Idrivers/staging/intel_media/graphics/rgx/services/include \
+	-Idrivers/staging/intel_media/graphics/rgx/services/include/shared \
+	-Idrivers/staging/intel_media/graphics/rgx/include \
+	-Idrivers/staging/intel_media/graphics/rgx/hwdefs \
+	-Idrivers/staging/intel_media/graphics/rgx/hwdefs/km \
+	-Idrivers/staging/intel_media/graphics/rgx/services/system/rgx_nohw \
+	-Idrivers/staging/intel_media/graphics/rgx/services/3rdparty/intel_devfreq

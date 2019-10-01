@@ -378,7 +378,7 @@ static int __send_short_pkg(struct mdfld_dsi_pkg_sender * sender,
 	gen_ctrl_val |= short_pkg->param << MCS_PARAMETER_POS;
 
 	if(pkg->transmission_type == MDFLD_DSI_HS_TRANSMISSION) {
-#if defined(CONFIG_BOARD_MFLD_MOTO)
+#if defined(CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY)
 		wait_for_no_mipi_bus_activity(sender, BIT2 | BIT18 | BIT27);
 #else
 		/*wait for hs fifo empty*/
@@ -389,7 +389,7 @@ static int __send_short_pkg(struct mdfld_dsi_pkg_sender * sender,
 		/*send pkg*/
 		REG_WRITE(hs_gen_ctrl_reg, gen_ctrl_val);
 	} else if(pkg->transmission_type == MDFLD_DSI_LP_TRANSMISSION) {
-#if defined(CONFIG_BOARD_MFLD_MOTO)
+#if defined(CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY)
 		wait_for_no_mipi_bus_activity(sender, BIT10 | BIT26 | BIT27);
 #else
 		wait_for_dbi_fifo_empty(sender);
@@ -437,7 +437,7 @@ static int __send_long_pkg(struct mdfld_dsi_pkg_sender * sender,
 
 	if(pkg->transmission_type == MDFLD_DSI_HS_TRANSMISSION) {
 		/*wait for hs ctrl and data fifos to be empty*/
-#if defined(CONFIG_BOARD_MFLD_MOTO)
+#if defined(CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY)
 		wait_for_no_mipi_bus_activity(sender, BIT2 | BIT18 | BIT27);
 #else
 		wait_for_dbi_fifo_empty(sender);
@@ -468,7 +468,7 @@ static int __send_long_pkg(struct mdfld_dsi_pkg_sender * sender,
 		REG_WRITE(hs_gen_ctrl_reg, gen_ctrl_val);
 
 	} else if(pkg->transmission_type == MDFLD_DSI_LP_TRANSMISSION) {
-#if defined(CONFIG_BOARD_MFLD_MOTO)
+#if defined(CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY)
 		wait_for_no_mipi_bus_activity(sender, BIT10 | BIT26 | BIT27);
 #else
 		wait_for_dbi_fifo_empty(sender);

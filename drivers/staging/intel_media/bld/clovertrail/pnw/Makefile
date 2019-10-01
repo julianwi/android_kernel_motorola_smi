@@ -41,6 +41,17 @@ include_dirs := \
 	-Iinclude/linux \
 	-Iinclude/drm
 
+ifeq ($(DISPLAY_DRIVER_DEBUG_INTERFACE), true)
+ccflags-y += -DDISPLAY_DRIVER_DEBUG_INTERFACE
+endif
+
+#only for internal testing
+ccflags-y += -DOTM_HDMI_UNIT_TEST
+
+#enable HDCP
+ccflags-y += -DOTM_HDMI_HDCP_ENABLE
+ccflags-y += -DCONFIG_VIDEO_MRFLD_EC
+
 ccflags-y += $(include_dirs)
 
 ccflags-y += $(PVRDEFS-y)
@@ -72,6 +83,10 @@ $(DRIVER_NAME)-objs += $(FBDEVDIR)/drmlfb_displayclass.o \
 	$(DISPLAYDIR)/gi_renesas_cmd.o \
 	$(DISPLAYDIR)/mdfld_hdmi_audio.o \
 
+ifeq ($(CONFIG_MDFD_GL3), y)
+$(DRIVER_NAME)-objs += $(MEDIA_COMMON_DIR)/mdfld_gl3.o
+endif
+
 ifeq ($(CONFIG_MDFD_VIDEO_DECODE), y)
 $(DRIVER_NAME)-objs += $(ENCODE_DIR)/pnw_topaz.o \
 	$(ENCODE_DIR)/pnw_topazinit.o \
@@ -89,6 +104,50 @@ $(DRIVER_NAME)-objs += $(ENCODE_DIR)/pnw_topaz.o \
 	$(VIDEO_COMMON_DIR)/psb_ttm_placement_user.o
 endif
 
+ifeq ($(CONFIG_SUPPORT_HDMI), y)
+$(DRIVER_NAME)-objs += $(DISPLAYDIR)/psb_umevents.o \
+	$(DISPLAYDIR)/psb_socket.o \
+	$(OTM_HDMI_SRC)/pil/common/otm_hdmi.o \
+	$(OTM_HDMI_SRC)/pil/common/mode_info.o \
+	$(OTM_HDMI_SRC)/pil/common/hdcp.o \
+	$(OTM_HDMI_SRC)/pil/common/edid.o \
+	$(OTM_HDMI_SRC)/pil/common/edid_print.o \
+	$(OTM_HDMI_SRC)/pil/common/infoframes.o \
+	$(OTM_HDMI_SRC)/ipil/common/otm_ipil_main.o \
+	$(OTM_HDMI_SRC)/ipil/common/ipil_hdcp.o \
+	$(OTM_HDMI_SRC)/os/android/android_hdmi.o \
+	$(OTM_HDMI_SRC)/ipil/specific/mfld/ips_hdmi.o \
+	$(OTM_HDMI_SRC)/ipil/specific/mfld/ips_hdcp.o \
+	$(OTM_HDMI_SRC)/ipil/specific/ctp/ips_hdmi_priv.o \
+	$(OTM_HDMI_SRC)/pil/specific/ctp/ps_hdmi.o
+endif
+
+ifeq ($(CONFIG_SUPPORT_YB_MIPI_DISPLAY), y)
+	$(DRIVER_NAME)-objs += $(DISPLAYDIR)/yb_cmi_vid.o
+endif
+
+ifeq ($(CONFIG_CTP_DPST), y)
+$(DRIVER_NAME)-objs += $(DISPLAYDIR)/psb_dpst.o \
+	$(DISPLAYDIR)/psb_dpst_func.o \
+	$(DISPLAYDIR)/dispmgrnl.o
+endif
+
+ifeq ($(CONFIG_SUPPORT_TMD_MIPI_600X1024_DISPLAY), y)
+$(DRIVER_NAME)-objs += $(DISPLAYDIR)/tmd_6x10_vid.o
+endif
+
+ifeq ($(CONFIG_SUPPORT_MIPI_H8C7_CMD_DISPLAY), y)
+$(DRIVER_NAME)-objs += $(DISPLAYDIR)/h8c7_cmd.o
+endif
+
+ifeq ($(CONFIG_SUPPORT_VB_MIPI_DISPLAY), y)
+$(DRIVER_NAME)-objs += $(DISPLAYDIR)/vb_cmd.o
+endif
+
+ifeq ($(CONFIG_R63311_MIPI_VIDEO_MODE), y)
+$(DRIVER_NAME)-objs += $(DISPLAYDIR)/r63311_vid.o
+endif
+
 ifeq ($(CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY), y)
 $(DRIVER_NAME)-objs += $(DISPLAYDIR)/smd_qhd_amoled_430_cmd.o
 $(DRIVER_NAME)-objs += $(DISPLAYDIR)/smd_dynamic_gamma.o
@@ -96,3 +155,4 @@ $(DRIVER_NAME)-objs += $(DISPLAYDIR)/mdfld_mot_cmn.o
 endif
 
 obj-y += $(DRIVER_NAME).o
+
