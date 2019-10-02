@@ -12,6 +12,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/sfi.h>
+#include <linux/input/touch_platform.h>
 
 #include <asm/intel-mid.h>
 
@@ -20,9 +21,12 @@
  */
 #include "device_libs/platform_ipc.h"
 #include "device_libs/platform_msic_power_btn.h"
+#include "device_libs/platform_atmxt-224s.h"
 
 const struct devs_id __initconst device_ids[] = {
 	{"msic_power_btn", SFI_DEV_TYPE_IPC, 1, &msic_power_btn_platform_data,
 					&ipc_device_handler},
+	{ATMXT_I2C_NAME, SFI_DEV_TYPE_I2C, 0, &mot_setup_touch_atmxt,
+					NULL},
 	{},
 };
