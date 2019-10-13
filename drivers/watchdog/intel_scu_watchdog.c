@@ -1188,9 +1188,9 @@ static DEVICE_ATTR(reboot_config, S_IWUSR | S_IRUGO,
 	reboot_config_show, reboot_config_store);
 static DEVICE_ATTR(shutdown_config, S_IWUSR | S_IRUGO,
 	shutdown_config_show, shutdown_config_store);
-static DEVICE_ATTR(reboot_ongoing, S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(reboot_ongoing, S_IWUSR,
 	NULL, reboot_ongoing_store);
-static DEVICE_ATTR(shutdown_ongoing, S_IWUSR | S_IRUGO,
+static DEVICE_ATTR(shutdown_ongoing, S_IWUSR,
 	NULL, shutdown_ongoing_store);
 
 
