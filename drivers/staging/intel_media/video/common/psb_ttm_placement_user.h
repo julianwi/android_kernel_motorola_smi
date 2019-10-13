@@ -93,6 +93,10 @@ struct ttm_pl_create_ub_req {
  * @placement: Flag indicating the placement status of
  * the buffer object using the TTM_PL flags above.
  *
+ * @sync_object_arg: Used for user-space synchronization and
+ * depends on the synchronization model used. If fences are
+ * used, this is the buffer_object::fence_type_mask
+ *
  * Output from the TTM_PL_CREATE and TTM_PL_REFERENCE, and
  * TTM_PL_SETSTATUS ioctls.
  */
@@ -103,6 +107,7 @@ struct ttm_pl_rep {
 	uint64_t map_handle;
 	uint32_t placement;
 	uint32_t handle;
+	uint32_t sync_object_arg;
 	uint32_t pad64;
 };
 
