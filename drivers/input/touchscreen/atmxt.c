@@ -1025,7 +1025,7 @@ static int atmxt_request_irq(struct atmxt_driver_data *dd)
 		goto atmxt_request_irq_fail;
 	}
 
-	disable_irq_nosync(dd->client->irq);
+	//disable_irq_nosync(dd->client->irq);
 
 atmxt_request_irq_fail:
 	return err;
