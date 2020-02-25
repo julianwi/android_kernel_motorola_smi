@@ -110,6 +110,40 @@ static int lnw_gpio_request(struct gpio_chip *chip, unsigned offset)
 	return 0;
 }
 
+void lnw_gpio_set_alt(int gpio, int alt)
+{
+	struct lnw_gpio *lnw;
+	u32 __iomem *mem;
+	int reg;
+	int bit;
+	u32 value;
+	unsigned long flags;
+
+	/* use this trick to get memio */
+	lnw = irq_get_chip_data(gpio_to_irq(gpio));
+	if (!lnw) {
+		pr_err("langwell_gpio: can not find pin %d\n", gpio);
+		return;
+	}
+	if (gpio < lnw->chip.base || gpio >= lnw->chip.base + lnw->chip.ngpio) {
+		dev_err(lnw->chip.dev, "langwell_gpio: wrong pin %d to config alt\n", gpio);
+		return;
+	}
+	gpio -= lnw->chip.base;
+	reg = gpio / 16;
+	bit = gpio % 16;
+
+	mem = gpio_reg(&lnw->chip, 0, GAFR);
+	spin_lock_irqsave(&lnw->lock, flags);
+	value = readl(mem + reg);
+	value &= ~(3 << (bit * 2));
+	value |= (alt & 3) << (bit * 2);
+	writel(value, mem + reg);
+	spin_unlock_irqrestore(&lnw->lock, flags);
+	dev_dbg(lnw->chip.dev, "ALT: writing 0x%x to %p\n", value, mem + reg);
+}
+EXPORT_SYMBOL_GPL(lnw_gpio_set_alt);
+
 static int lnw_gpio_get(struct gpio_chip *chip, unsigned offset)
 {
 	void __iomem *gplr = gpio_reg(chip, offset, GPLR);

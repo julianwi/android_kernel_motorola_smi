@@ -246,6 +246,13 @@ config BATTERY_INTEL_MID
 	  Say Y here to enable the battery driver on Intel MID
 	  platforms.
 
+config BATTERY_INTEL_MDF
+	tristate "Battery driver for Intel Medfield MID platforms"
+	depends on INTEL_SCU_IPC && USB_CHIPIDEA && MSIC_GPADC
+	help
+	  Say Y here to enable the battery driver on Intel Medfield based MID
+	  platforms.
+
 config BATTERY_RX51
 	tristate "Nokia RX-51 (N900) battery driver"
 	depends on TWL4030_MADC
