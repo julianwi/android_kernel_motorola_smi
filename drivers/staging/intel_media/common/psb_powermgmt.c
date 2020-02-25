@@ -45,8 +45,12 @@
 #include <linux/atomic.h>
 
 #include <linux/version.h>
+#define SUPPORT_EARLY_SUSPEND 1
 #include <asm/intel_scu_pmic.h>
 
+#if SUPPORT_EARLY_SUSPEND
+#include <linux/earlysuspend.h>
+#endif /* if SUPPORT_EARLY_SUSPEND */
 #include <asm/intel-mid.h>
 #include <linux/mutex.h>
 #include <linux/gpio.h>
