@@ -30,6 +30,11 @@
 #include "device_libs/platform_atmxt-224s.h"
 #include "device_libs/platform_max17042.h"
 
+/*
+ * WIFI devices
+ */
+#include "device_libs/platform_wl12xx.h"
+
 const struct devs_id __initconst device_ids[] = {
 	{"msic_power_btn", SFI_DEV_TYPE_IPC, 1, &msic_power_btn_platform_data,
 					&ipc_device_handler},
@@ -40,5 +45,6 @@ const struct devs_id __initconst device_ids[] = {
 					&ipc_device_handler},
 	{"msic_battery", SFI_DEV_TYPE_IPC, 1, &msic_battery_platform_data,
 					&ipc_device_handler},
+	{"wl12xx_clk_vmmc", SFI_DEV_TYPE_SD, 0, &wl12xx_platform_data, NULL},
 	{},
 };

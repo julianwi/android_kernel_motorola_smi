@@ -6055,7 +6055,7 @@ static void wlcore_nvs_cb(const struct firmware *fw, void *context)
 	wl->if_ops = pdev_data->if_ops;
 
 	if (wl->platform_quirks & WL12XX_PLATFORM_QUIRK_EDGE_IRQ)
-		irqflags = IRQF_TRIGGER_RISING;
+		irqflags = IRQF_TRIGGER_RISING | IRQF_ONESHOT;
 	else
 		irqflags = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
 

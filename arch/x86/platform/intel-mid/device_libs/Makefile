@@ -5,3 +5,4 @@ obj-$(subst m,y,$(CONFIG_TOUCHSCREEN_ATMEL_MXT224S))	+= platform_atmxt-224s.o
 obj-$(subst m,y,$(CONFIG_BATTERY_INTEL_MDF))			+= platform_msic_battery.o
 obj-$(subst m,y,$(CONFIG_BATTERY_MAX17042))				+= platform_max17042.o
 obj-$(subst m,y,$(CONFIG_MSIC_GPADC))					+= platform_msic_adc.o
+obj-$(subst m,y,$(CONFIG_WILINK_PLATFORM_DATA))			+= platform_wl12xx.o
