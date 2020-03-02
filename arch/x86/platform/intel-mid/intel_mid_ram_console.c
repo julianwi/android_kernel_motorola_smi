@@ -14,10 +14,9 @@
  */
 
 #include <linux/platform_device.h>
+#include <linux/platform_data/ram_console.h>
 #include <linux/memblock.h>
-#include <linux/persistent_ram.h>
 
-#include "../../../../drivers/staging/android/ram_console.h"
 
 #define SZ_2M                           0x00200000
 #define SZ_16M                          0x01000000
@@ -26,26 +25,26 @@
 #define INTEL_MID_RAM_CONSOLE_START_DEFAULT	SZ_16M
 #define INTEL_MID_RAM_CONSOLE_SIZE_DEFAULT	SZ_2M
 
+
+static struct resource ram_console_resources[] = {
+	{
+		.flags  = IORESOURCE_MEM,
+		.start  = INTEL_MID_RAM_CONSOLE_START_DEFAULT,
+		.end    = INTEL_MID_RAM_CONSOLE_START_DEFAULT +
+			  INTEL_MID_RAM_CONSOLE_SIZE_DEFAULT - 1,
+	},
+};
+
 static struct ram_console_platform_data ram_console_pdata;
 
 static struct platform_device ram_console_device = {
 	.name		= "ram_console",
 	.id		= -1,
+	.num_resources	= ARRAY_SIZE(ram_console_resources),
+	.resource	= ram_console_resources,
 	.dev		= {
 	.platform_data	= &ram_console_pdata,
 	},
-};
-
-struct persistent_ram_descriptor ram_console_desc = {
-	.name = "ram_console",
-	.size = INTEL_MID_RAM_CONSOLE_SIZE_DEFAULT,
-};
-
-struct persistent_ram ram_console_ram = {
-	.start = INTEL_MID_RAM_CONSOLE_START_DEFAULT,
-	.size = INTEL_MID_RAM_CONSOLE_SIZE_DEFAULT,
-	.num_descs = 1,
-	.descs = &ram_console_desc,
 };
 
 static __initdata bool intel_mid_ramconsole_inited;
@@ -63,9 +62,9 @@ static int __init intel_mid_ram_console_register(void)
 	ret = platform_device_register(&ram_console_device);
 	if (ret) {
 		pr_err("%s: unable to register ram console device:"
-			"start=0x%08x, size=0x%08x, ret=%d\n",
-			__func__, (u32)ram_console_ram.start,
-			(u32)ram_console_ram.size, ret);
+			"start=0x%08x, end=0x%08x, ret=%d\n",
+			__func__, (u32)ram_console_resources[0].start,
+			(u32)ram_console_resources[0].end, ret);
 	}
 
 	return ret;
@@ -74,7 +73,6 @@ device_initcall(intel_mid_ram_console_register);
 
 void __init ram_consle_reserve_memory(void)
 {
-	int ret;
 	phys_addr_t mem;
 	size_t size;
 
@@ -85,11 +83,9 @@ void __init ram_consle_reserve_memory(void)
 	if (!mem)
 		panic("Cannot allocate \n");
 
-	ram_console_ram.start = mem;
-	ram_console_ram.size = size;
+	ram_console_resources[0].start = mem;
+	ram_console_resources[0].end = mem + size - 1;
+	memblock_reserve(mem, size);
 
-	ret = persistent_ram_early_init(&ram_console_ram);
-	if (!ret)
-		intel_mid_ramconsole_inited = true;
+	intel_mid_ramconsole_inited = true;
 }
-
