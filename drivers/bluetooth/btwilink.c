@@ -22,7 +22,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#define DEBUG
+#define DEBUG 1
 #include <linux/platform_device.h>
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
@@ -270,6 +270,8 @@ static int ti_st_send_frame(struct sk_buff *skb)
 	memcpy(skb_push(skb, 1), &bt_cb(skb)->pkt_type, 1);
 
 	BT_DBG("%s: type %d len %d", hdev->name, bt_cb(skb)->pkt_type,
+			skb->len);
+	BT_ERR("%s: type %d len %d", hdev->name, bt_cb(skb)->pkt_type,
 			skb->len);
 
 	/* Insert skb to shared transport layer's transmit queue.

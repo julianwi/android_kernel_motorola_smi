@@ -32,9 +32,9 @@
  *	common physical interface like UART.
  */
 enum proto_type {
-	ST_BT,
-	ST_FM,
-	ST_GPS,
+	ST_BT = 4, /* HCI_EVENT_PKT */
+	ST_FM = 8,
+	ST_GPS = 9,
 	ST_MAX_CHANNELS = 16,
 };
 
@@ -158,6 +158,8 @@ struct st_data_s {
 	unsigned long ll_state;
 	void *kim_data;
 	struct tty_struct *tty;
+	struct device *tty_dev;
+	int is_awake;
 };
 
 /*
@@ -205,8 +207,8 @@ void gps_chrdrv_stub_init(void);
 /* time in msec to wait for
  * line discipline to be installed
  */
-#define LDISC_TIME	1000
-#define CMD_RESP_TIME	800
+#define LDISC_TIME	1150
+#define CMD_RESP_TIME	1000
 #define CMD_WR_TIME	5000
 #define MAKEWORD(a, b)  ((unsigned short)(((unsigned char)(a)) \
 	| ((unsigned short)((unsigned char)(b))) << 8))
@@ -442,10 +444,10 @@ struct ti_st_plat_data {
 	unsigned long baud_rate;
 	int (*suspend)(struct platform_device *, pm_message_t);
 	int (*resume)(struct platform_device *);
-	int (*chip_enable) (struct kim_data_s *);
-	int (*chip_disable) (struct kim_data_s *);
-	int (*chip_asleep) (struct kim_data_s *);
-	int (*chip_awake) (struct kim_data_s *);
+	int (*chip_enable) (struct st_data_s *);
+	int (*chip_disable) (struct st_data_s *);
+	int (*chip_asleep) (struct st_data_s *);
+	int (*chip_awake) (struct st_data_s *);
 };
 
 #endif /* TI_WILINK_ST_H */
