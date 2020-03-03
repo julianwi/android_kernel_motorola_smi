@@ -382,6 +382,7 @@ struct snd_soc_platform *snd_soc_lookup_platform(struct device *dev);
 int snd_soc_register_codec(struct device *dev,
 		const struct snd_soc_codec_driver *codec_drv,
 		struct snd_soc_dai_driver *dai_drv, int num_dai);
+int snd_soc_codec_set_params(struct snd_soc_codec *codec, unsigned int param);
 void snd_soc_unregister_codec(struct device *dev);
 int snd_soc_register_component(struct device *dev,
 			 const struct snd_soc_component_driver *cmpnt_drv,
@@ -748,6 +749,7 @@ struct snd_soc_codec_driver {
 			  int clk_id, int source, unsigned int freq, int dir);
 	int (*set_pll)(struct snd_soc_codec *codec, int pll_id, int source,
 		unsigned int freq_in, unsigned int freq_out);
+	int (*set_params)(struct snd_soc_codec *codec, unsigned int param);
 
 	/* codec IO */
 	unsigned int (*read)(struct snd_soc_codec *, unsigned int);

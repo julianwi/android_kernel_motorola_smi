@@ -7,3 +7,4 @@ obj-$(subst m,y,$(CONFIG_BATTERY_MAX17042))				+= platform_max17042.o
 obj-$(subst m,y,$(CONFIG_MSIC_GPADC))					+= platform_msic_adc.o
 obj-$(subst m,y,$(CONFIG_WILINK_PLATFORM_DATA))			+= platform_wl12xx.o
 obj-$(subst m,y,$(CONFIG_TI_ST))						+= platform_btwilink.o
+obj-$(subst m,y,$(CONFIG_SND_MFLD_MACHINE))				+= platform_msic_audio.o

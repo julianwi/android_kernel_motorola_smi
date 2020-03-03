@@ -45,7 +45,7 @@
 #define DISABLE_CHANNEL(chan_num) \
 	(REG_BIT8 << chan_num)
 
-#define DESCS_PER_CHANNEL	16
+#define DESCS_PER_CHANNEL	128
 /*DMA Registers*/
 /*registers associated with channel programming*/
 #define DMA_REG_SIZE		0x400
@@ -165,16 +165,18 @@ union intel_mid_dma_cfg_hi {
  * @dma_base: MMIO register space DMA engine base pointer
  * @ch_id: DMA channel id
  * @lock: channel spinlock
+ * @completed: DMA cookie
  * @active_list: current active descriptors
  * @queue: current queued up descriptors
  * @free_list: current free descriptors
- * @slave: dma slave structure
- * @descs_allocated: total number of descriptors allocated
- * @dma: dma device structure pointer
+ * @slave: dma slave struture
+ * @descs_allocated: total number of decsiptors allocated
+ * @dma: dma device struture pointer
  * @busy: bool representing if ch is busy (active txn) or not
  * @in_use: bool representing if ch is in use or not
  * @raw_tfr: raw trf interrupt received
  * @raw_block: raw block interrupt received
+ * @block_intr_status: bool representing if block intr is enabled or not
  */
 struct intel_mid_dma_chan {
 	struct dma_chan		chan;
@@ -182,6 +184,7 @@ struct intel_mid_dma_chan {
 	void __iomem		*dma_base;
 	int			ch_id;
 	spinlock_t		lock;
+	dma_cookie_t		completed;
 	struct list_head	active_list;
 	struct list_head	queue;
 	struct list_head	free_list;
@@ -192,6 +195,8 @@ struct intel_mid_dma_chan {
 	u32			raw_tfr;
 	u32			raw_block;
 	struct intel_mid_dma_slave *mid_slave;
+	struct dma_pool		*lli_pool;
+	bool block_intr_status;
 };
 
 static inline struct intel_mid_dma_chan *to_intel_mid_dma_chan(
@@ -220,6 +225,8 @@ enum intel_mid_dma_state {
  * @block_size: Block size of DMA transfer supported (from drv_data)
  * @pimr_mask: MMIO register addr for periphral interrupt (from drv_data)
  * @state: dma PM device state
+ * @tfr_intr_mask: hold the status of tfr intr mask register
+ * @block_intr_mask: hold the status of block intr mask register
  */
 struct middma_device {
 	struct pci_dev		*pdev;
@@ -236,6 +243,8 @@ struct middma_device {
 	int			block_size;
 	unsigned int		pimr_mask;
 	enum intel_mid_dma_state state;
+	unsigned long		tfr_intr_mask;
+	unsigned long		block_intr_mask;
 };
 
 static inline struct middma_device *to_middma_device(struct dma_device *common)

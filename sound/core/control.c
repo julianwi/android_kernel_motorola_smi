@@ -815,6 +815,7 @@ static int snd_ctl_elem_info_user(struct snd_ctl_file *ctl,
 
 	if (copy_from_user(&info, _info, sizeof(info)))
 		return -EFAULT;
+
 	snd_power_lock(ctl->card);
 	result = snd_power_wait(ctl->card, SNDRV_CTL_POWER_D0);
 	if (result >= 0)

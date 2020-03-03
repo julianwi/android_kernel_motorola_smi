@@ -23,6 +23,7 @@
 #include "device_libs/platform_msic_power_btn.h"
 #include "device_libs/platform_msic_battery.h"
 #include "device_libs/platform_msic_adc.h"
+#include "device_libs/platform_msic_audio.h"
 
 /*
  * I2C devices
@@ -46,5 +47,7 @@ const struct devs_id __initconst device_ids[] = {
 	{"msic_battery", SFI_DEV_TYPE_IPC, 1, &msic_battery_platform_data,
 					&ipc_device_handler},
 	{"wl12xx_clk_vmmc", SFI_DEV_TYPE_SD, 0, &wl12xx_platform_data, NULL},
+	{"msic_audio", SFI_DEV_TYPE_IPC, 1, &msic_audio_platform_data,
+					&ipc_device_handler},
 	{},
 };
