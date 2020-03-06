@@ -8,3 +8,4 @@ obj-$(subst m,y,$(CONFIG_MSIC_GPADC))					+= platform_msic_adc.o
 obj-$(subst m,y,$(CONFIG_WILINK_PLATFORM_DATA))			+= platform_wl12xx.o
 obj-$(subst m,y,$(CONFIG_TI_ST))						+= platform_btwilink.o
 obj-$(subst m,y,$(CONFIG_SND_MFLD_MACHINE))				+= platform_msic_audio.o
+obj-$(subst m,y,$(CONFIG_HSI_ARASAN))					+= platform_hsi_modem.o

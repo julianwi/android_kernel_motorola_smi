@@ -82,8 +82,8 @@ module_param(debug, int, 0600);
  * Semi-arbitrary buffer size limits. 0710 is normally run with 32-64 byte
  * limits so this is plenty
  */
-#define MAX_MRU 1500
-#define MAX_MTU 1500
+#define MAX_MRU 32768
+#define MAX_MTU 32768
 #define	GSM_NET_TX_TIMEOUT (HZ*10)
 
 /**
@@ -257,6 +257,7 @@ struct gsm_mux {
 	u8 ftype;		/* UI or UIH */
 	int t1, t2;		/* Timers in 1/100th of a sec */
 	int n2;			/* Retry count */
+	int clocal;		/* CLOCAL default state */
 
 	/* Statistics (not currently exposed) */
 	unsigned long bad_fcs;
@@ -2180,6 +2181,7 @@ struct gsm_mux *gsm_alloc_mux(void)
 	gsm->encoding = 1;
 	gsm->mru = 64;	/* Default to encoding 1 so these should be 64 */
 	gsm->mtu = 64;
+	gsm->clocal = 1; /* Ignore CD (DV flags in MSC)*/
 	gsm->dead = 1;	/* Avoid early tty opens */
 
 	return gsm;
@@ -2538,6 +2540,7 @@ static int gsmld_config(struct tty_struct *tty, struct gsm_mux *gsm,
 	gsm->encoding = c->encapsulation;
 	gsm->adaption = c->adaption;
 	gsm->n2 = c->n2;
+	gsm->clocal = c->clocal;
 
 	if (c->i == 1)
 		gsm->ftype = UIH;
@@ -2581,6 +2584,7 @@ static int gsmld_ioctl(struct tty_struct *tty, struct file *file,
 		pr_debug("Ftype %d i %d\n", gsm->ftype, c.i);
 		c.mru = gsm->mru;
 		c.mtu = gsm->mtu;
+		c.clocal = gsm->clocal;
 		c.k = 0;
 		if (copy_to_user((void *)arg, &c, sizeof(c)))
 			return -EFAULT;
@@ -2929,6 +2933,7 @@ static int gsmtty_install(struct tty_driver *driver, struct tty_struct *tty)
 
 static int gsmtty_open(struct tty_struct *tty, struct file *filp)
 {
+	struct ktermios save;
 	struct gsm_dlci *dlci = tty->driver_data;
 	struct tty_port *port = &dlci->port;
 
@@ -2937,6 +2942,17 @@ static int gsmtty_open(struct tty_struct *tty, struct file *filp)
 	dlci_get(dlci->gsm->dlci[0]);
 	mux_get(dlci->gsm);
 	tty_port_tty_set(port, tty);
+
+	/* Perform a change to the CLOCAL state and call into the driver
+	   layer to make it visible. All done with the termios mutex */
+	if (dlci->gsm->clocal) {
+		mutex_lock(&tty->termios_mutex);
+		save = tty->termios;
+		tty->termios.c_cflag |= CLOCAL;
+		if (tty->ops->set_termios)
+			tty->ops->set_termios(tty, &save);
+		mutex_unlock(&tty->termios_mutex);
+	}
 
 	dlci->modem_rx = 0;
 	/* We could in theory open and close before we wait - eg if we get

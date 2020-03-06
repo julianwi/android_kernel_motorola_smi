@@ -36,6 +36,11 @@
  */
 #include "device_libs/platform_wl12xx.h"
 
+/*
+ * HSI devices
+ */
+#include "device_libs/platform_hsi_modem.h"
+
 const struct devs_id __initconst device_ids[] = {
 	{"msic_power_btn", SFI_DEV_TYPE_IPC, 1, &msic_power_btn_platform_data,
 					&ipc_device_handler},
@@ -49,5 +54,6 @@ const struct devs_id __initconst device_ids[] = {
 	{"wl12xx_clk_vmmc", SFI_DEV_TYPE_SD, 0, &wl12xx_platform_data, NULL},
 	{"msic_audio", SFI_DEV_TYPE_IPC, 1, &msic_audio_platform_data,
 					&ipc_device_handler},
+	{"hsi_ifx_modem", SFI_DEV_TYPE_HSI, 0, &hsi_modem_platform_data, NULL},
 	{},
 };
