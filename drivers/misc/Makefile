@@ -55,3 +55,6 @@ obj-$(CONFIG_VMWARE_VMCI)	+= vmw_vmci/
 obj-$(CONFIG_LATTICE_ECP3_CONFIG)	+= lattice-ecp3-config.o
 obj-$(CONFIG_SRAM)		+= sram.o
 obj-$(CONFIG_UID_SYS_STATS) += uid_sys_stats.o
+obj-$(CONFIG_SENSORS_AK8963)	+= akm8963.o
+obj-$(CONFIG_SENSORS_LIS3DH_MOT)    += lis3dh_mot.o
+obj-$(CONFIG_A1026)		+= a1026.o

@@ -41,6 +41,11 @@
  */
 #include "device_libs/platform_hsi_modem.h"
 
+/*
+ * Miscellaneous devices
+ */
+#include "device_libs/platform_mmi-sensors.h"
+
 const struct devs_id __initconst device_ids[] = {
 	{"msic_power_btn", SFI_DEV_TYPE_IPC, 1, &msic_power_btn_platform_data,
 					&ipc_device_handler},
@@ -57,3 +62,11 @@ const struct devs_id __initconst device_ids[] = {
 	{"hsi_ifx_modem", SFI_DEV_TYPE_HSI, 0, &hsi_modem_platform_data, NULL},
 	{},
 };
+
+static int __init mmi_platform_init(void)
+{
+	mmi_register_board_i2c_devs();
+	mmi_sensors_init();
+	return 0;
+}
+device_initcall(mmi_platform_init);
