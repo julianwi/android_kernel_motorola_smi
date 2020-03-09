@@ -457,6 +457,21 @@ config USB_EG20T
 	  ML7213/ML7831 is companion chip for Intel Atom E6xx series.
 	  ML7213/ML7831 is completely compatible for Intel EG20T PCH.
 
+config USB_LANGWELL
+	boolean "Intel Langwell/Penwell USB Device Controller"
+	depends on PCI
+	select USB_GADGET_DUALSPEED
+	help
+	   Intel Langwell/Penwell USB Device Controller is a High-Speed USB
+	   On-The-Go device controller.
+
+	   The number of programmable endpoints is different through
+	   controller revision.
+
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "langwell_udc" and force all
+	   gadget drivers to also be dynamically linked.
+
 #
 # LAST -- dummy/emulated controller
 #

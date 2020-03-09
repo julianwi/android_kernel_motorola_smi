@@ -227,4 +227,18 @@ config DUAL_ROLE_USB_INTF
 	  this interface to expose it capabilities to the userspace
 	  and thereby allowing userspace to change the port mode.
 
+config USB_PENWELL_OTG
+	tristate "Intel Penwell USB OTG dual-role support"
+	depends on USB && PCI && INTEL_SCU_IPC
+	select USB_OTG
+	select USB_OTG_UTILS
+	help
+	  Say Y here if you want to build Intel Penwell USB OTG
+	  transciever driver in kernel. This driver implements role
+	  switch between EHCI host driver and Penwell USB OTG
+	  client driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called penwell_otg.
+
 endif # USB_PHY

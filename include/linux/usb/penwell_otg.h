@@ -407,7 +407,7 @@ struct otg_bc_cap {
 	unsigned int		mA;
 #define CHRG_CURR_UNKNOWN	0
 #define CHRG_CURR_DISCONN	0
-#define CHRG_CURR_SDP_SUSP	CONFIG_USB_GADGET_SUSPEND_VBUS_DRAW
+#define CHRG_CURR_SDP_SUSP	2
 #define CHRG_CURR_SDP_LOW	100
 #define CHRG_CURR_SDP_HIGH	500
 #define CHRG_CURR_SDP_INVAL	500
@@ -510,16 +510,7 @@ struct penwell_otg *iotg_to_penwell(struct intel_mid_otg_xceiv *iotg)
 	return container_of(iotg, struct penwell_otg, iotg);
 }
 
-static inline
-int penwell_otg_query_charging_cap(struct otg_bc_cap *cap)
-{
-	cap->chrg_type = CHRG_CDP;
-	cap->mA = CHRG_CURR_CDP;
-	cap->current_event = USBCHRG_EVENT_CONNECT;
-
-	return 0;
-}
-
+extern int penwell_otg_query_charging_cap(struct otg_bc_cap *cap);
 extern int penwell_otg_query_power_supply_cap(
 			struct power_supply_charger_cap *cap);
 extern void *penwell_otg_register_bc_callback(

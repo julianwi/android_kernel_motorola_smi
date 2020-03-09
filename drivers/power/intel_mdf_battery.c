@@ -70,7 +70,7 @@
 #define MAX17050_NAME "max17050_battery"
 #define MAX17XXX_STR_LEN 16
 
-//static void *otg_handle;
+static void *otg_handle;
 static struct device *msic_dev;
 static struct power_supply *fg_psy;
 
@@ -2381,7 +2381,6 @@ static int msic_event_handler(void *arg, int event, struct otg_bc_cap *cap)
 	return 0;
 }
 
-#if 0
 static void msic_chrg_callback_worker(struct work_struct *work)
 {
 	struct otg_bc_cap cap;
@@ -2410,7 +2409,6 @@ static int msic_charger_callback(void *arg, int event, struct otg_bc_cap *cap)
 	schedule_delayed_work(&mbi->chrg_callback_dwrk, 0);
 	return 0;
 }
-#endif
 
 /**
  * msic_status_monitor - worker function to monitor status
@@ -3198,7 +3196,7 @@ static int msic_battery_probe(struct ipc_device *ipcdev)
 	INIT_DELAYED_WORK(&mbi->disconn_handler, msic_batt_disconn);
 	INIT_DELAYED_WORK(&mbi->connect_handler, msic_batt_temp_charging);
 	INIT_DEFERRABLE_WORK(&mbi->chr_status_monitor, msic_status_monitor);
-	//INIT_DELAYED_WORK(&mbi->chrg_callback_dwrk, msic_chrg_callback_worker);
+	INIT_DELAYED_WORK(&mbi->chrg_callback_dwrk, msic_chrg_callback_worker);
 	wake_lock_init(&mbi->wakelock, WAKE_LOCK_SUSPEND,
 		       "msicbattery_wakelock");
 
@@ -3297,13 +3295,13 @@ static int msic_battery_probe(struct ipc_device *ipcdev)
 	}
 
 	/* Register with OTG */
-	//otg_handle = penwell_otg_register_bc_callback(msic_charger_callback,
-	//					      (void *)mbi);
-	//if (!otg_handle) {
-	//	dev_err(&ipcdev->dev, "battery: OTG Registration failed\n");
-	//	retval = -EBUSY;
-	//	goto otg_failed;
-	//}
+	otg_handle = penwell_otg_register_bc_callback(msic_charger_callback,
+						      (void *)mbi);
+	if (!otg_handle) {
+		dev_err(&ipcdev->dev, "battery: OTG Registration failed\n");
+		retval = -EBUSY;
+		goto otg_failed;
+	}
 
 	/* Init Runtime PM State */
 	pm_runtime_put_noidle(&mbi->ipcdev->dev);
@@ -3400,7 +3398,7 @@ static int msic_battery_probe(struct ipc_device *ipcdev)
 	return retval;
 
 requestirq_failed:
-	//penwell_otg_unregister_bc_callback(otg_handle);
+	penwell_otg_unregister_bc_callback(otg_handle);
 otg_failed:
 	device_remove_file(&ipcdev->dev, &dev_attr_is_valid);
 error_create_is_valid:
@@ -3448,7 +3446,7 @@ static int msic_battery_remove(struct ipc_device *ipcdev)
 	struct msic_power_module_info *mbi = ipc_get_drvdata(ipcdev);
 
 	if (mbi) {
-		//penwell_otg_unregister_bc_callback(otg_handle);
+		penwell_otg_unregister_bc_callback(otg_handle);
 		flush_scheduled_work();
 		intel_mid_gpadc_free(mbi->adc_handle);
 		free_irq(mbi->irq, mbi);
