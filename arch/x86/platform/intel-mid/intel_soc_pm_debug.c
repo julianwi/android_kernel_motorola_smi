@@ -937,7 +937,7 @@ void pmu_stats_init(void)
 
 #ifdef CONFIG_PM_DEBUG
 	/* dynamic debug tracing in every 5 mins */
-	INIT_DELAYED_WORK_DEFERRABLE(&mid_pmu_cxt->log_work, pmu_log_stat);
+	INIT_DEFERRABLE_WORK(&mid_pmu_cxt->log_work, pmu_log_stat);
 	schedule_delayed_work(&mid_pmu_cxt->log_work,
 				msecs_to_jiffies(pmu_stats_interval*1000));
 

@@ -296,7 +296,6 @@ out:
 static void stuck_wakelock_timeout(unsigned long data)
 {
 	pr_info("**** active wakelocks ****\n");
-	has_wake_lock(WAKE_LOCK_SUSPEND);
 	stuck_wakelock_wdset();
 }
 
