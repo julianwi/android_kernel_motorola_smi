@@ -28,6 +28,15 @@
 #include "ttm/ttm_lock.h"
 #include <linux/slab.h>
 #include <linux/sched.h>
+#include <linux/version.h>
+#include <linux/dma-buf.h>
+#include "drmP.h"
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
+#include "drm.h"
+#else
+#include <uapi/drm/drm.h>
+#endif
+
 
 struct ttm_bo_user_object {
 	struct ttm_base_object base;
@@ -108,6 +117,80 @@ static void ttm_bo_user_destroy(struct ttm_buffer_object *bo)
 	kfree(user_bo);
 }
 
+/* This is used for sg_table which is derived from user-pointer */
+static void ttm_tt_free_user_pages(struct ttm_buffer_object *bo)
+{
+	struct page *page;
+	struct page **pages = NULL;
+	int i, ret;
+/*
+	struct page **pages_to_wb;
+
+	pages_to_wb = kmalloc(ttm->num_pages * sizeof(struct page *),
+			GFP_KERNEL);
+
+	if (pages_to_wb && ttm->caching_state != tt_cached) {
+		int num_pages_wb = 0;
+
+		for (i = 0; i < ttm->num_pages; ++i) {
+			page = ttm->pages[i];
+			if (page == NULL)
+				continue;
+			pages_to_wb[num_pages_wb++] = page;
+		}
+
+		if (set_pages_array_wb(pages_to_wb, num_pages_wb))
+			printk(KERN_ERR TTM_PFX "Failed to set pages to wb\n");
+
+	} else if (NULL == pages_to_wb) {
+		printk(KERN_ERR TTM_PFX
+		       "Failed to allocate memory for set wb operation.\n");
+	}
+
+*/
+	pages = kzalloc(bo->num_pages * sizeof(struct page *), GFP_KERNEL);
+	if (unlikely(pages == NULL)) {
+		printk(KERN_ERR "TTM bo free: kzalloc failed\n");
+		return ;
+	}
+
+	ret = drm_prime_sg_to_page_addr_arrays(bo->sg, pages,
+						 NULL, bo->num_pages);
+	if (ret) {
+		printk(KERN_ERR "sg to pages: kzalloc failed\n");
+		return ;
+	}
+
+	for (i = 0; i < bo->num_pages; ++i) {
+		page = pages[i];
+		if (page == NULL)
+			continue;
+
+		put_page(page);
+	}
+	/* kfree(pages_to_wb); */
+	kfree(pages);
+}
+
+/* This is used for sg_table which is derived from user-pointer */
+static void ttm_ub_bo_user_destroy(struct ttm_buffer_object *bo)
+{
+	struct ttm_bo_user_object *user_bo =
+		container_of(bo, struct ttm_bo_user_object, bo);
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 3, 0))
+	if (bo->sg) {
+		ttm_tt_free_user_pages(bo);
+		sg_free_table(bo->sg);
+		kfree(bo->sg);
+		bo->sg = NULL;
+	}
+#endif
+
+	ttm_mem_global_free(bo->glob->mem_glob, bo->acc_size);
+	kfree(user_bo);
+}
+
 static void ttm_bo_user_release(struct ttm_base_object **p_base)
 {
 	struct ttm_bo_user_object *user_bo;
@@ -151,6 +234,9 @@ static void ttm_pl_fill_rep(struct ttm_buffer_object *bo,
 	rep->map_handle = bo->addr_space_offset;
 	rep->placement = bo->mem.placement;
 	rep->handle = user_bo->base.hash.key;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
+	rep->sync_object_arg = (uint32_t)(unsigned long)bo->sync_obj_arg;
+#endif
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
@@ -174,7 +260,7 @@ static int ttm_bo_create_private(struct ttm_bo_device *bdev,
 				 uint32_t page_alignment,
 				 unsigned long buffer_start,
 				 bool interruptible,
-				 struct file *persistant_swap_storage,
+				 struct file *persistent_swap_storage,
 				 struct ttm_buffer_object **p_bo)
 {
 	struct ttm_buffer_object *bo;
@@ -196,7 +282,7 @@ static int ttm_bo_create_private(struct ttm_bo_device *bdev,
 
 	ret = ttm_bo_init(bdev, bo, size, type, placement, page_alignment,
 			  buffer_start, interruptible,
-			  persistant_swap_storage, acc_size, NULL);
+			  persistent_swap_storage, acc_size, NULL);
 	if (likely(ret == 0))
 		*p_bo = bo;
 
@@ -230,13 +316,15 @@ int psb_ttm_bo_check_placement(struct ttm_buffer_object *bo,
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
 int ttm_buffer_object_create(struct ttm_bo_device *bdev,
 			     unsigned long size,
 			     enum ttm_bo_type type,
 			     uint32_t flags,
 			     uint32_t page_alignment,
+			     unsigned long buffer_start,
 			     bool interruptible,
-			     struct file *persistant_swap_storage,
+			     struct file *persistent_swap_storage,
 			     struct ttm_buffer_object **p_bo)
 {
 	struct ttm_placement placement = default_placement;
@@ -251,14 +339,39 @@ int ttm_buffer_object_create(struct ttm_bo_device *bdev,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 	ret = ttm_bo_create_private(bdev, size, type, &placement,
 		page_alignment, buffer_start, interruptible,
-		persistant_swap_storage, p_bo);
+		persistent_swap_storage, p_bo);
 #else
 	ret = ttm_bo_create(bdev, size, type, &placement, page_alignment,
-		interruptible, persistant_swap_storage, p_bo);
+		buffer_start, interruptible, persistent_swap_storage, p_bo);
 #endif
 
 	return ret;
 }
+#else
+int ttm_buffer_object_create(struct ttm_bo_device *bdev,
+			     unsigned long size,
+			     enum ttm_bo_type type,
+			     uint32_t flags,
+			     uint32_t page_alignment,
+			     bool interruptible,
+			     struct file *persistent_swap_storage,
+			     struct ttm_buffer_object **p_bo)
+{
+	struct ttm_placement placement = default_placement;
+	int ret;
+
+	if ((flags & TTM_PL_MASK_CACHING) == 0)
+		flags |= TTM_PL_FLAG_WC | TTM_PL_FLAG_UNCACHED;
+
+	placement.num_placement = 1;
+	placement.placement = &flags;
+
+	ret = ttm_bo_create(bdev, size, type, &placement, page_alignment,
+		interruptible, persistent_swap_storage, p_bo);
+
+	return ret;
+}
+#endif
 
 
 int ttm_pl_create_ioctl(struct ttm_object_file *tfile,
@@ -307,12 +420,18 @@ int ttm_pl_create_ioctl(struct ttm_object_file *tfile,
 	if ((flags & TTM_PL_MASK_CACHING) == 0)
 		flags |=  TTM_PL_FLAG_WC | TTM_PL_FLAG_UNCACHED;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
+	ret = ttm_bo_init(bdev, bo, req->size,
+			  ttm_bo_type_device, &placement,
+			  req->page_alignment, 0, true,
+			  NULL, acc_size, NULL, &ttm_bo_user_destroy);
+#else
 	ret = ttm_bo_init(bdev, bo, req->size,
 			  ttm_bo_type_device, &placement,
 			  req->page_alignment, true,
 			  NULL, acc_size, NULL, &ttm_bo_user_destroy);
+#endif
 	ttm_read_unlock(lock);
-
 	/*
 	 * Note that the ttm_buffer_object_init function
 	 * would've called the destroy function on failure!!
@@ -365,6 +484,10 @@ int ttm_pl_ub_create_ioctl(struct ttm_object_file *tfile,
 	size_t acc_size = ttm_bo_acc_size(bdev, req->size,
 		sizeof(struct ttm_buffer_object));
 #endif
+	if (req->user_address & ~PAGE_MASK) {
+		printk(KERN_ERR "User pointer buffer need page alignment\n");
+		return -EFAULT;
+	}
 
 	ret = ttm_mem_global_alloc(mem_glob, acc_size, false, false);
 	if (unlikely(ret != 0))
@@ -446,20 +569,54 @@ int ttm_pl_ub_create_ioctl(struct ttm_object_file *tfile,
 			printk(KERN_ERR "get_user_pages err.\n");
 			return -ENOMEM;
 		}
+		sg = drm_prime_pages_to_sg(pages, num_pages);
+		if (unlikely(sg == NULL)) {
+			kfree(pages);
+			printk(KERN_ERR "drm_prime_pages_to_sg err.\n");
+			return -ENOMEM;
+		}
 		kfree(pages);
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0))
 	ret = ttm_bo_init(bdev,
 			  bo,
 			  req->size,
 			  TTM_HACK_WORKAROUND_ttm_bo_type_user,
 			  &placement,
 			  req->page_alignment,
+			  req->user_address,
 			  true,
 			  NULL,
 			  acc_size,
 			  NULL,
 			  &ttm_bo_user_destroy);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
+	ret = ttm_bo_init(bdev,
+			  bo,
+			  req->size,
+			  ttm_bo_type_sg,
+			  &placement,
+			  req->page_alignment,
+			  req->user_address,
+			  true,
+			  NULL,
+			  acc_size,
+			  sg,
+			  &ttm_ub_bo_user_destroy);
+#else
+	ret = ttm_bo_init(bdev,
+			  bo,
+			  req->size,
+			  ttm_bo_type_sg,
+			  &placement,
+			  req->page_alignment,
+			  true,
+			  NULL,
+			  acc_size,
+			  sg,
+			  &ttm_ub_bo_user_destroy);
+#endif
 
 	/*
 	 * Note that the ttm_buffer_object_init function
@@ -607,10 +764,11 @@ int ttm_pl_setstatus_ioctl(struct ttm_object_file *tfile,
 	if (unlikely(ret != 0))
 		goto out_err1;
 
-	ret = wait_event_interruptible(bo->event_queue,
-					atomic_read(&bo->cpu_writers) == 0);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
+	ret = ttm_bo_wait_cpu(bo, false);
 	if (unlikely(ret != 0))
 		goto out_err2;
+#endif
 
 	flags[0] = req->set_placement;
 	flags[1] = req->clr_placement;
@@ -627,7 +785,11 @@ int ttm_pl_setstatus_ioctl(struct ttm_object_file *tfile,
 	placement.num_placement = 1;
 	flags[0] = (req->set_placement | bo->mem.placement) & ~req->clr_placement;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
+	ret = ttm_bo_validate(bo, &placement, true, false, false);
+#else
 	ret = ttm_bo_validate(bo, &placement, true, false);
+#endif
 	if (unlikely(ret != 0))
 		goto out_err2;
 
@@ -706,7 +868,8 @@ int ttm_pl_verify_access(struct ttm_buffer_object *bo,
 	 * Check bo subclass.
 	 */
 
-	if (unlikely(bo->destroy != &ttm_bo_user_destroy))
+	if (unlikely(bo->destroy != &ttm_bo_user_destroy
+		&& bo->destroy != &ttm_ub_bo_user_destroy))
 		return -EPERM;
 
 	ubo = container_of(bo, struct ttm_bo_user_object, bo);
