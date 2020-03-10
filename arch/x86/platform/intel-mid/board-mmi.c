@@ -96,6 +96,39 @@ const struct devs_id __initconst device_ids[] = {
 	{},
 };
 
+#if defined(CONFIG_VIDEO_ATOMISP)
+#define SH833SU_I2C_ADDR	0x72		/* i2c address */
+#define SH833SU_BUS		4		/* i2c bus number */
+
+struct sfi_device_table_entry sh833su_pentry = {
+	.name		=	"lc898211",
+	.host_num	=	SH833SU_BUS,
+	.irq		=	255,
+	.addr		=	SH833SU_I2C_ADDR,
+};
+
+/*
+ * Temporary work around for items missing from SFI tables.
+ */
+static int __init mmi_i2c_sfi_workaround(void)
+{
+	struct devs_id *dev = NULL;
+
+	/* 
+	 * Add sh833su for detection; remove as soon as sh833su is
+	 * defined in SFI table
+	 */
+	dev = get_device_id(SFI_DEV_TYPE_I2C, "lc898211");
+	if (dev != NULL)
+		intel_ignore_i2c_device_register(&sh833su_pentry, dev);
+	else
+		pr_err("Dev id is NULL for %s\n", "lc898211");
+
+	return 0;
+}
+device_initcall(mmi_i2c_sfi_workaround);
+#endif
+
 static int __init mmi_platform_init(void)
 {
 	mmi_register_board_i2c_devs();
