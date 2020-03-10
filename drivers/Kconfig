@@ -172,4 +172,6 @@ source "drivers/android/Kconfig"
 
 source "drivers/modem_control/Kconfig"
 
+source "drivers/gps/Kconfig"
+
 endmenu
