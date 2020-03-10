@@ -171,9 +171,7 @@ int mfld_headset_set_switch(struct snd_kcontrol *kcontrol,
 		snd_soc_dapm_disable_pin(&codec->dapm, "Headphones");
 		snd_soc_dapm_enable_pin(&codec->dapm, "EPOUT");
 	}
-	mutex_lock(&codec->mutex);
 	snd_soc_dapm_sync(&codec->dapm);
-	mutex_unlock(&codec->mutex);
 	ctx->hs_switch = ucontrol->value.integer.value[0];
 
 	return 0;
@@ -196,9 +194,7 @@ static void mfld_lo_enable_out_pins(struct snd_soc_codec *codec)
 		snd_soc_dapm_disable_pin(&codec->dapm, "Headphones");
 		snd_soc_dapm_enable_pin(&codec->dapm, "EPOUT");
 	}
-	mutex_lock(&codec->mutex);
 	snd_soc_dapm_sync(&codec->dapm);
-	mutex_unlock(&codec->mutex);
 }
 
 int mfld_lo_get_switch(struct snd_kcontrol *kcontrol,
@@ -252,9 +248,7 @@ int mfld_lo_set_switch(struct snd_kcontrol *kcontrol,
 		snd_soc_update_bits(codec, SN95031_LOCTL, 0x66, 0x66);
 		break;
 	}
-	mutex_lock(&codec->mutex);
 	snd_soc_dapm_sync(&codec->dapm);
-	mutex_unlock(&codec->mutex);
 	ctx->sn95031_lo_dac = ucontrol->value.integer.value[0];
 	return 0;
 }
