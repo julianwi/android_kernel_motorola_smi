@@ -111,6 +111,18 @@ out:
 }
 EXPORT_SYMBOL_GPL(intel_scu_ipc_set_osc_clk0);
 
+#define MSIC_VPROG1_CTRL        0xD6
+#define MSIC_VPROG2_CTRL        0xD7
+#define MSIC_VPROG_ON           0xFF
+#define MSIC_VPROG_OFF          0
+
+int intel_scu_ipc_msic_vprog1(int on)
+{
+	return intel_scu_ipc_iowrite8(MSIC_VPROG1_CTRL,
+			on ? MSIC_VPROG_ON : MSIC_VPROG_OFF);
+}
+EXPORT_SYMBOL_GPL(intel_scu_ipc_msic_vprog1);
+
 static int major;
 
 /* ioctl commnds */

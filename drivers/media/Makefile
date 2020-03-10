@@ -31,3 +31,8 @@ obj-y += rc/
 obj-y += common/ platform/ pci/ usb/ mmc/ firewire/ parport/
 obj-$(CONFIG_VIDEO_DEV) += radio/
 
+obj-$(CONFIG_VIDEO_ATOMISP_CSS10) += atomisp/
+obj-$(CONFIG_VIDEO_MT9E013)  += mt9e013/
+obj-$(CONFIG_VIDEO_LM3554) += lm3554.o lm3556.o
+obj-$(CONFIG_VIDEO_LC898211) += lc898211.o
+obj-$(CONFIG_VIDEO_OV7736)  += ov7736.o

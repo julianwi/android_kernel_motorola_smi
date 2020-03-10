@@ -199,4 +199,50 @@ source "drivers/media/i2c/Kconfig"
 source "drivers/media/tuners/Kconfig"
 source "drivers/media/dvb-frontends/Kconfig"
 
+config VIDEO_ATOMISP
+	bool "Intel Atom Image Signal Processor Driver"
+	depends on VIDEO_V4L2
+	---help---
+	  Say Y here if your platform supports Intel Atom SoC
+	  camera imaging subsystem.
+
+	  To enable a specific atomisp driver, see CONFIG_VIDEO_ATOMISP_CSS1
+	  and related options.
+
+config VIDEO_LM3554
+	tristate "LM3554 flash light driver"
+	depends on VIDEO_V4L2 && I2C
+	---help---
+	  This is a Video4Linux2 sub-dev driver for the LM3554
+	  flash light driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lm3554
+
+config VIDEO_LC898211
+	tristate "LC898211 IC driver for Semco HVCA actuator/EEPROM modules"
+	depends on I2C && VIDEO_V4L2 && VIDEO_ATOMISP
+	---help---
+	  This is a Video4Linux2 driver for LC898211 IC to control
+	  Semco Hybrid VCA and EEPROM modules.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lc898211.
+
+	  It currently only works with the atomisp driver.
+
+config VIDEO_OV7736
+	tristate "Omnivision ov7736 sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_ATOMISP
+	---help---
+	  This is a Video4Linux2 sensor-level driver for the Omnivision
+	  ov7736 sensor.
+
+	  ov7736 is video camrea sensor.
+
+	  It currently only works with the atomisp driver.
+
+source "drivers/media/atomisp/Kconfig"
+source "drivers/media/mt9e013/Kconfig"
+
 endif # MEDIA_SUPPORT

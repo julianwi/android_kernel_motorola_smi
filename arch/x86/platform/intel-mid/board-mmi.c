@@ -30,6 +30,9 @@
  */
 #include "device_libs/platform_atmxt-224s.h"
 #include "device_libs/platform_max17042.h"
+#include "device_libs/platform_mt9e013.h"
+#include "device_libs/platform_sh833su.h"
+#include "device_libs/platform_ov7736.h"
 
 /*
  * WIFI devices
@@ -45,6 +48,20 @@
  * Miscellaneous devices
  */
 #include "device_libs/platform_mmi-sensors.h"
+#include "device_libs/platform_camera.h"
+
+static void __init *no_platform_data(void *info)
+{
+	return NULL;
+}
+
+const struct intel_v4l2_subdev_id v4l2_ids[] = {
+	{"mt9e013", RAW_CAMERA, ATOMISP_CAMERA_PORT_PRIMARY},
+	{"lc898211", CAMERA_MOTOR, ATOMISP_CAMERA_PORT_PRIMARY},
+	{"ov7736", SOC_CAMERA, ATOMISP_CAMERA_PORT_SECONDARY},
+	{"lm3556", LED_FLASH, -1},
+	{},
+};
 
 const struct devs_id __initconst device_ids[] = {
 	{"msic_power_btn", SFI_DEV_TYPE_IPC, 1, &msic_power_btn_platform_data,
@@ -60,6 +77,22 @@ const struct devs_id __initconst device_ids[] = {
 	{"msic_audio", SFI_DEV_TYPE_IPC, 1, &msic_audio_platform_data,
 					&ipc_device_handler},
 	{"hsi_ifx_modem", SFI_DEV_TYPE_HSI, 0, &hsi_modem_platform_data, NULL},
+	/*
+	 * I2C devices for camera image subsystem which will not be load into
+	 * I2C core while initialize
+	 */
+	{"mt9e013", SFI_DEV_TYPE_I2C, 0, &mt9e013_platform_data,
+					&intel_ignore_i2c_device_register},
+	{"lc898211", SFI_DEV_TYPE_I2C, 0, &sh833su_platform_data,
+					&intel_ignore_i2c_device_register},
+	{"ov7736", SFI_DEV_TYPE_I2C, 0, &ov7736_platform_data,
+					&intel_ignore_i2c_device_register},
+	{"lm3556", SFI_DEV_TYPE_I2C, 0, &no_platform_data,
+					&intel_ignore_i2c_device_register},
+	{"ov7736", SFI_DEV_TYPE_I2C, 0, &ov7736_platform_data,
+					&intel_ignore_i2c_device_register},
+	{"lm3556", SFI_DEV_TYPE_I2C, 0, &no_platform_data,
+					&intel_ignore_i2c_device_register},
 	{},
 };
 
