@@ -5,6 +5,10 @@
 #include "mdfld_dsi_pkg_sender.h"
 #include "smd_dynamic_gamma.h"
 
+#ifdef CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY_KCAL_CONTROL
+struct kcal_lut_data kcal_lut_data_cmd;
+#endif
+
 extern bool kexec_in_progress;
 
 #define BRIGHTNESS_MIN_LEVEL 1
@@ -536,11 +540,22 @@ static char *smd_qhd_amoled_cmd_get_gamma_settings(
 	static bool gamma_calced;
 	int index;
 
+#ifndef CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY_KCAL_CONTROL
 	if (!gamma_calced) {
+#else
+	if (!gamma_calced || !kcal_lut_data_cmd.applied) {
+#endif
 		smd_qhd_amoled_cmd_get_mtp_offset(dsi_config, raw_mtp);
 		smd_dynamic_gamma_calc(V0, 0xfa, 0x02, raw_mtp,
+#ifndef CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY_KCAL_CONTROL
 				input_gamma, gamma_settings);
+#else
+				input_gamma, gamma_settings, kcal_lut_data_cmd);
+#endif
 		gamma_calced = true;
+#ifdef CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY_KCAL_CONTROL
+		kcal_lut_data_cmd.applied = true;
+#endif
 	}
 
 	index = (level * NUM_NIT_LVLS) / BRIGHTNESS_MAX_LEVEL;
@@ -611,6 +626,16 @@ int smd_qhd_amoled_cmd_reset(struct mdfld_dsi_config *dsi_config)
 	printk(KERN_ERR "***%s****", __func__);
 	return 0;
 }
+
+#ifdef CONFIG_SUPPORT_SMD_QHD_AMOLED_COMMAND_MODE_DISPLAY_KCAL_CONTROL
+void smd_kcal_apply(struct kcal_lut_data lut_data)
+{
+	kcal_lut_data_cmd.red = lut_data.red;
+	kcal_lut_data_cmd.green = lut_data.green;
+	kcal_lut_data_cmd.blue = lut_data.blue;
+	kcal_lut_data_cmd.applied = lut_data.applied;
+}
+#endif
 
 void smd_qhd_amoled_430_cmd_init(struct drm_device *dev,
 				struct panel_funcs *p_funcs)
