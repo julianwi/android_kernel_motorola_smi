@@ -21,3 +21,4 @@ obj-$(subst m,y,$(CONFIG_VIDEO_OV7736))					+= platform_ov7736.o
 obj-$(subst m,y,$(CONFIG_VIDEO_OV8830))					+= platform_ov8830.o
 obj-$(subst m,y,$(CONFIG_VIDEO_LM3554))					+= platform_lm3554.o
 endif
+obj-$(subst m,y,$(CONFIG_LEDS_LM2755))					+= platform_lm2755.o

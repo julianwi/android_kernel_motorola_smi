@@ -253,6 +253,13 @@ config BATTERY_INTEL_MDF
 	  Say Y here to enable the battery driver on Intel Medfield based MID
 	  platforms.
 
+config MMI_DISABLE_CHRG_LED
+        bool "Disable charging LED when charger is inserted"
+        depends on BATTERY_INTEL_MDF
+        help
+          Disable charging LED when charger is inserted according to
+          Motorola LED Guidelines.
+
 config BATTERY_RX51
 	tristate "Nokia RX-51 (N900) battery driver"
 	depends on TWL4030_MADC
