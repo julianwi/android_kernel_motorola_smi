@@ -34,6 +34,7 @@
 #include "device_libs/platform_sh833su.h"
 #include "device_libs/platform_ov7736.h"
 #include "device_libs/platform_lm2755.h"
+#include "device_libs/platform_pn544.h"
 
 /*
  * WIFI devices
@@ -95,6 +96,7 @@ const struct devs_id __initconst device_ids[] = {
 	{"lm3556", SFI_DEV_TYPE_I2C, 0, &no_platform_data,
 					&intel_ignore_i2c_device_register},
 	{"lm2755", SFI_DEV_TYPE_I2C, 0, &lm2755_led_platform_data, NULL},
+	{"pn544", SFI_DEV_TYPE_I2C, 0, &pn544_platform_data, NULL},
 	{},
 };
 
