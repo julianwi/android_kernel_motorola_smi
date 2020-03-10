@@ -34,19 +34,12 @@
 #include <linux/stat.h>
 #include <linux/string.h>
 #include <linux/firmware.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
 
 static int atmxt_probe(struct i2c_client *client,
 		const struct i2c_device_id *id);
 static int atmxt_remove(struct i2c_client *client);
 static int atmxt_suspend(struct i2c_client *client, pm_message_t message);
 static int atmxt_resume(struct i2c_client *client);
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void atmxt_early_suspend(struct early_suspend *handler);
-static void atmxt_late_resume(struct early_suspend *handler);
-#endif
 static int atmxt_init(void);
 static void atmxt_exit(void);
 static void atmxt_free(struct atmxt_driver_data *dd);
@@ -132,10 +125,8 @@ static struct i2c_driver atmxt_driver = {
 	.probe = atmxt_probe,
 	.remove = atmxt_remove,
 	.id_table = atmxt_id,
-#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend = atmxt_suspend,
 	.resume = atmxt_resume,
-#endif
 };
 
 static int atmxt_probe(struct i2c_client *client,
@@ -205,13 +196,6 @@ static int atmxt_probe(struct i2c_client *client,
 	err = atmxt_gpio_init(dd);
 	if (err < 0)
 		goto atmxt_probe_fail;
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	dd->es.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
-	dd->es.suspend = atmxt_early_suspend;
-	dd->es.resume = atmxt_late_resume;
-	register_early_suspend(&dd->es);
-#endif
 
 	err = atmxt_request_irq(dd);
 	if (err < 0)
@@ -438,39 +422,6 @@ atmxt_resume_no_dd_fail:
 	return err;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void atmxt_early_suspend(struct early_suspend *handler)
-{
-	int err = 0;
-	struct atmxt_driver_data *dd;
-
-	dd = container_of(handler, struct atmxt_driver_data, es);
-
-	err = atmxt_suspend(dd->client, PMSG_SUSPEND);
-	if (err < 0) {
-		printk(KERN_ERR "%s: Suspend failed with error code %d",
-			__func__, err);
-	}
-
-	return;
-}
-static void atmxt_late_resume(struct early_suspend *handler)
-{
-	int err = 0;
-	struct atmxt_driver_data *dd;
-
-	dd = container_of(handler, struct atmxt_driver_data, es);
-
-	err = atmxt_resume(dd->client);
-	if (err < 0) {
-		printk(KERN_ERR "%s: Resume failed with error code %d",
-			__func__, err);
-	}
-
-	return;
-}
-#endif
-
 static int atmxt_init(void)
 {
 	return i2c_add_driver(&atmxt_driver);
@@ -490,9 +441,6 @@ static void atmxt_free(struct atmxt_driver_data *dd)
 	if (dd != NULL) {
 		dd->pdata = NULL;
 		dd->client = NULL;
-#ifdef CONFIG_HAS_EARLYSUSPEND
-		unregister_early_suspend(&dd->es);
-#endif
 
 		if (dd->mutex != NULL) {
 			kfree(dd->mutex);
@@ -3597,6 +3545,26 @@ static ssize_t atmxt_debug_ic_ver_show(struct device *dev,
 }
 static DEVICE_ATTR(ic_ver, S_IRUGO, atmxt_debug_ic_ver_show, NULL);
 
+static ssize_t atmxt_power_state_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	int err = size;
+	struct atmxt_driver_data *dd = dev_get_drvdata(dev);
+
+	if (sysfs_streq(buf, "on")) {
+		atmxt_resume(dd->client);
+	}
+	else if (sysfs_streq(buf, "off")) {
+		atmxt_suspend(dd->client, PMSG_SUSPEND);
+	}
+	else {
+		printk(KERN_ERR "%s: power state must be start or stop.\n", __func__);
+		err = -EINVAL;
+	}
+	return err;
+}
+static DEVICE_ATTR(power_state, S_IWUSR, NULL, atmxt_power_state_store);
+
 static int atmxt_create_sysfs_files(struct atmxt_driver_data *dd)
 {
 	int err = 0;
@@ -3689,6 +3657,12 @@ static int atmxt_create_sysfs_files(struct atmxt_driver_data *dd)
 		err = check;
 	}
 
+	check = device_create_file(&(dd->client->dev), &dev_attr_power_state);
+	if (check < 0) {
+		printk(KERN_ERR "%s: Failed to create power_state.\n", __func__);
+		err = check;
+	}
+
 	return err;
 }
 
@@ -3715,5 +3689,6 @@ static void atmxt_remove_sysfs_files(struct atmxt_driver_data *dd)
 	device_remove_file(&(dd->client->dev), &dev_attr_ic_grpoffset);
 #endif
 	device_remove_file(&(dd->client->dev), &dev_attr_ic_ver);
+	device_remove_file(&(dd->client->dev), &dev_attr_power_state);
 	return;
 }

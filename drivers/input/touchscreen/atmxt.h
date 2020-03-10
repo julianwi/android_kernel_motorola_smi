@@ -25,9 +25,6 @@
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/mutex.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
 
 #define ATMXT_DRIVER_VERSION        "YN-04-01"
 #define ATMXT_DRIVER_DATE           "2012-06-28"
@@ -165,9 +162,6 @@ struct atmxt_driver_data {
 	struct i2c_client           *client;
 	struct mutex                *mutex;
 	struct input_dev            *in_dev;
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend        es;
-#endif
 
 	enum atmxt_driver_state     drv_stat;
 	enum atmxt_ic_state         ic_stat;
