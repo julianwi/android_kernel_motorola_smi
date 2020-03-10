@@ -43,6 +43,8 @@ struct sep_device {
 
 	/* major / minor numbers of device */
 	dev_t sep_devno;
+	/* guards access to ICR/IMR registers */
+	struct mutex sep_mutex;
 	/* guards command sent counter */
 	spinlock_t snd_rply_lck;
 	/* guards driver memory usage in fastcall if */
@@ -85,6 +87,20 @@ struct sep_device {
 	unsigned long send_ct;
 	/* counter for the messages from sep */
 	unsigned long reply_ct;
+
+	/* Counter for RPMB iterations */
+	u32 rpmb_iterations;
+
+	/* Workqueue for RPMB */
+	struct workqueue_struct *rpmb_workqueue;
+	struct work_struct	rpmb_work;
+
+	/* Current rpmb data pointer */
+	u8 *current_data_pointer;
+
+	/* Current emmc (non data) block pointer */
+	struct sep_non_data_field *current_emmc_block;
+	struct sep_non_data_field *current_emmc_resp_block;
 
 	/* The following are used for kernel crypto client requests */
 	u32 in_kernel; /* Set for kernel client request */
