@@ -23,6 +23,8 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/nfc.h>
+#include <linux/slab.h>
+#include <linux/ceph/decode.h>
 
 #include <net/nfc/nfc.h>
 

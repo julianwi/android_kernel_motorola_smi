@@ -26,6 +26,7 @@
 #include <net/genetlink.h>
 #include <linux/nfc.h>
 #include <linux/slab.h>
+#include <linux/ceph/decode.h>
 
 #include "nfc.h"
 #include "llcp.h"
