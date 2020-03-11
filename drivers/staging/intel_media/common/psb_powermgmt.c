@@ -45,16 +45,11 @@
 #include <linux/atomic.h>
 
 #include <linux/version.h>
-#define SUPPORT_EARLY_SUSPEND 1
 #include <asm/intel_scu_pmic.h>
 
-#if SUPPORT_EARLY_SUSPEND
-#include <linux/earlysuspend.h>
-#endif /* if SUPPORT_EARLY_SUSPEND */
 #include <asm/intel-mid.h>
 #include <linux/mutex.h>
 #include <linux/gpio.h>
-//#include <linux/early_suspend_sysfs.h>
 #include "mdfld_dsi_dbi_dsr.h"
 
 #define SCU_CMD_VPROG2  0xe3
@@ -93,21 +88,6 @@ void release_ospm_lock(void)
 
 static void ospm_early_suspend();
 static void ospm_late_resume();
-
-#if SUPPORT_EARLY_SUSPEND
-/*
- * gfx_early_suspend
- *
- */
-static void gfx_early_suspend(struct early_suspend *h);
-static void gfx_late_resume(struct early_suspend *h);
-
-static struct early_suspend gfx_early_suspend_desc = {
-	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB,
-	.suspend = gfx_early_suspend,
-	.resume = gfx_late_resume,
-};
-#endif /* if SUPPORT_EARLY_SUSPEND */
 
 static int ospm_runtime_pm_msvdx_suspend(struct drm_device *dev)
 {
@@ -405,19 +385,24 @@ out:
 	return;
 }
 
-/*
-static ssize_t early_suspend_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t mdfld_power_state_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
 {
-	if (!strncmp(buf, EARLY_SUSPEND_ON, EARLY_SUSPEND_STATUS_LEN))
-		ospm_early_suspend();
-	else if (!strncmp(buf, EARLY_SUSPEND_OFF, EARLY_SUSPEND_STATUS_LEN))
-		ospm_late_resume();
+	int err = size;
 
-	return count;
+	if (sysfs_streq(buf, "on")) {
+		ospm_late_resume();
+	}
+	else if (sysfs_streq(buf, "off")) {
+		ospm_early_suspend();
+	}
+	else {
+		printk(KERN_ERR "%s: power state must be start or stop.\n", __func__);
+		err = -EINVAL;
+	}
+	return err;
 }
-static DEVICE_EARLY_SUSPEND_ATTR(early_suspend_store);
-*/
+static DEVICE_ATTR(power_state, S_IWUSR, NULL, mdfld_power_state_store);
 
 /*
  * ospm_power_init
@@ -443,13 +428,7 @@ void ospm_power_init(struct drm_device *dev)
 	atomic_set(&g_videoenc_access_count, 0);
 	atomic_set(&g_videodec_access_count, 0);
 
-//	device_create_file(&dev->pdev->dev, &dev_attr_early_suspend);
-
-//	register_early_suspend_device(&gpDrmDevice->pdev->dev);
-
-#if SUPPORT_EARLY_SUSPEND
-	register_early_suspend(&gfx_early_suspend_desc);
-#endif /* if SUPPORT_EARLY_SUSPEND */
+	device_create_file(&dev->pdev->dev, &dev_attr_power_state);
 
 #ifdef OSPM_STAT
 	dev_priv->graphics_state = PSB_PWR_STATE_ON;
@@ -466,12 +445,8 @@ void ospm_power_init(struct drm_device *dev)
  */
 void ospm_power_uninit(void)
 {
-//	device_remove_file(&gpDrmDevice->pdev->dev, &dev_attr_early_suspend);
-//	unregister_early_suspend_device(&gpDrmDevice->pdev->dev);
+	device_remove_file(&gpDrmDevice->pdev->dev, &dev_attr_power_state);
 
-#if SUPPORT_EARLY_SUSPEND
-    unregister_early_suspend(&gfx_early_suspend_desc);
-#endif /* if SUPPORT_EARLY_SUSPEND */
     mutex_destroy(&g_ospm_mutex);
 #ifdef CONFIG_GFX_RTPM
 	pm_runtime_get_noresume(&gpDrmDevice->pdev->dev);
@@ -1225,20 +1200,6 @@ static void ospm_late_resume()
 
 	mutex_unlock(&dev->mode_config.mutex);
 }
-
-#if SUPPORT_EARLY_SUSPEND
-static void gfx_early_suspend(struct early_suspend *h)
-{
-	ospm_early_suspend();
-}
-#endif /* if SUPPORT_EARLY_SUSPEND */
-
-#if SUPPORT_EARLY_SUSPEND
-static void gfx_late_resume(struct early_suspend *h)
-{
-	ospm_late_resume();
-}
-#endif /* if SUPPORT_EARLY_SUSPEND */
 
 /*
  * ospm_power_suspend
