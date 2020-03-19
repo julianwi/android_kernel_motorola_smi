@@ -374,21 +374,21 @@ static struct cpuidle_state mfld_cstates[CPUIDLE_STATE_MAX] = {
 	{
 		.name = "ATM-S0i1",
 		.desc = "MWAIT 0x52",
-		.flags = MWAIT2flg(MID_S0I1_STATE) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
+		.flags = MWAIT2flg(C6_HINT) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = CSTATE_EXIT_LATENCY_S0i1,
 		.power_usage  = S0I1_POWER_USAGE,
 		.enter = &soc_s0ix_idle },
 	{
 		.name = "ATM-LpAudio",
 		.desc = "MWAIT 0x52",
-		.flags = MWAIT2flg(MID_LPMP3_STATE) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
+		.flags = MWAIT2flg(C6_HINT) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = CSTATE_EXIT_LATENCY_LPMP3,
 		.power_usage  = LPMP3_POWER_USAGE,
 		.enter = &soc_s0ix_idle },
 	{
 		.name = "ATM-S0i3",
 		.desc = "MWAIT 0x52",
-		.flags = MWAIT2flg(MID_S0I3_STATE) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
+		.flags = MWAIT2flg(C6_HINT) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = CSTATE_EXIT_LATENCY_S0i3,
 		.power_usage  = S0I3_POWER_USAGE,
 		.enter = &soc_s0ix_idle }
@@ -472,8 +472,20 @@ static int soc_s0ix_idle(struct cpuidle_device *dev,
 		struct cpuidle_driver *drv, int index)
 {
 	struct cpuidle_state *state = &drv->states[index];
+	unsigned long eax;
 	//unsigned long eax = (unsigned long)cpuidle_get_statedata(state);
-	unsigned long eax = (unsigned long)flg2MWAIT(state->flags);
+	//unsigned long eax = (unsigned long)flg2MWAIT(state->flags);
+	switch (index) {
+		case S0I1_STATE_IDX:
+			eax = MID_S0I1_STATE;
+			break;
+		case LPMP3_STATE_IDX:
+			eax = MID_LPMP3_STATE;
+			break;
+		case S0I3_STATE_IDX:
+			eax = MID_S0I3_STATE;
+			break;
+	}
 
 	int gov_req_state = (int) eax;
 	int cpu = smp_processor_id();
