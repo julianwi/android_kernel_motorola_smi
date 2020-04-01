@@ -473,8 +473,6 @@ static int soc_s0ix_idle(struct cpuidle_device *dev,
 {
 	struct cpuidle_state *state = &drv->states[index];
 	unsigned long eax;
-	//unsigned long eax = (unsigned long)cpuidle_get_statedata(state);
-	//unsigned long eax = (unsigned long)flg2MWAIT(state->flags);
 	switch (index) {
 		case S0I1_STATE_IDX:
 			eax = MID_S0I1_STATE;
@@ -484,6 +482,9 @@ static int soc_s0ix_idle(struct cpuidle_device *dev,
 			break;
 		case S0I3_STATE_IDX:
 			eax = MID_S0I3_STATE;
+			break;
+		case C6_STATE_IDX:
+			eax = C6_HINT;
 			break;
 	}
 
