@@ -125,8 +125,8 @@ static struct i2c_driver atmxt_driver = {
 	.probe = atmxt_probe,
 	.remove = atmxt_remove,
 	.id_table = atmxt_id,
-	.suspend = atmxt_suspend,
-	.resume = atmxt_resume,
+	//.suspend = atmxt_suspend,
+	//.resume = atmxt_resume,
 };
 
 static int atmxt_probe(struct i2c_client *client,
@@ -306,6 +306,7 @@ static int atmxt_suspend(struct i2c_client *client, pm_message_t message)
 	}
 
 	atmxt_dbg(dd, ATMXT_DBG3, "%s: Suspend complete.\n", __func__);
+	err = 0;
 
 atmxt_suspend_fail:
 	mutex_unlock(dd->mutex);
@@ -414,6 +415,7 @@ static int atmxt_resume(struct i2c_client *client)
 	}
 
 	atmxt_dbg(dd, ATMXT_DBG3, "%s: Resume complete.\n", __func__);
+	err = 0;
 
 atmxt_resume_fail:
 	mutex_unlock(dd->mutex);
