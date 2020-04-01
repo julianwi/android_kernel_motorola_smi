@@ -671,9 +671,10 @@ static int alloc_user_pages(struct hmm_buffer_object *bo,
 	}
 
 	mutex_unlock(&bo->mutex);
-	down_read(&current->mm->mmap_sem);
+	//v4l2_err(&atomisp_dev, "current->mm->mmap_sem owned by : %d\n", current->mm->mmap_sem.owner->pid);
+	//down_read(&current->mm->mmap_sem);
 	vma = find_vma(current->mm, userptr);
-	up_read(&current->mm->mmap_sem);
+	//up_read(&current->mm->mmap_sem);
 	if (vma == NULL) {
 		v4l2_err(&atomisp_dev, "find_vma failed\n");
 		atomisp_kernel_free(bo->pages);
