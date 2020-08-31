@@ -264,6 +264,7 @@ static struct irq_chip lnw_irqchip = {
 	.irq_mask	= lnw_irq_mask,
 	.irq_unmask	= lnw_irq_unmask,
 	.irq_set_type	= lnw_irq_type,
+	.flags		= IRQCHIP_SKIP_SET_WAKE,
 };
 
 static DEFINE_PCI_DEVICE_TABLE(lnw_gpio_ids) = {   /* pin number */
