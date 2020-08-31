@@ -2117,7 +2117,7 @@ static int hsu_runtime_idle(struct device *dev)
 	return -EBUSY;
 }
 
-static int hsu_enable_dma_irq(bool en)
+static void hsu_enable_dma_irq(bool en)
 {
 	static DEFINE_MUTEX(dma_lock);
 
@@ -2230,15 +2230,6 @@ static int hsu_suspend_noirq(struct device *dev)
 		up = priv;
 		if (!allow_for_suspend(up))
 			return -EBUSY;
-
-#ifdef CONFIG_PM_RUNTIME
-		/* check if RPM suspend has been unlocked */
-		if (atomic_read(&up->dev->power.usage_count) > 1
-		    || up->dev->power.disable_depth > 0) {
-			dev_dbg(up->dev, "%s: rmp is active\n", __func__);
-			return -EBUSY;
-		}
-#endif
 	}
 
 	return 0;
@@ -2259,15 +2250,6 @@ static int hsu_suspend(struct device *dev)
 
 		if (!allow_for_suspend(up))
 			return -EBUSY;
-
-#ifdef CONFIG_PM_RUNTIME
-		/* check if RPM suspend has been unlocked */
-		if (atomic_read(&up->dev->power.usage_count) > 1
-		    || up->dev->power.disable_depth > 0) {
-			dev_dbg(up->dev, "%s: rmp is active\n", __func__);
-			return -EBUSY;
-		}
-#endif
 
 		hsu_enable_dma_irq(false);
 		disable_irq(up->port.irq);
