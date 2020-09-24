@@ -347,6 +347,9 @@ static int vrtc_mrst_do_probe(struct device *dev, struct resource *iomem,
 	mrst_rtc.dev = dev;
 	dev_set_drvdata(dev, &mrst_rtc);
 
+	/* make RTC device wake capable from sleep */
+	device_init_wakeup(dev, true);
+
 	mrst_rtc.rtc = rtc_device_register(driver_name, dev,
 				&mrst_rtc_ops, THIS_MODULE);
 	if (IS_ERR(mrst_rtc.rtc)) {
